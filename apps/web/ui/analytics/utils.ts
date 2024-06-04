@@ -1,27 +1,49 @@
-import { SINGULAR_ANALYTICS_ENDPOINTS } from "@/lib/analytics/constants";
 import { AnalyticsGroupByOptions } from "@/lib/analytics/types";
 import { editQueryString } from "@/lib/analytics/utils";
 import { fetcher } from "@dub/utils";
 import { useContext } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { AnalyticsContext } from ".";
 
+type AnalyticsFilterResult =
+  | ({ count?: number } & Record<string, any>)[]
+  | null;
+
+/**
+ * Fetches event counts grouped by the specified filter
+ *
+ * @param groupByOrParams Either a groupBy option or a query parameter object including groupBy
+ * @param options Additional options
+ */
 export function useAnalyticsFilterOption(
-  groupBy: AnalyticsGroupByOptions,
-): ({ count?: number } & Record<string, any>)[] | null {
+  groupByOrParams:
+    | AnalyticsGroupByOptions
+    | ({ groupBy: AnalyticsGroupByOptions } & Record<string, any>),
+  options?: { cacheOnly?: boolean },
+): AnalyticsFilterResult {
+  const { cache } = useSWRConfig();
+
   const { baseApiPath, queryString, selectedTab, requiresUpgrade } =
     useContext(AnalyticsContext);
 
-  const singular = SINGULAR_ANALYTICS_ENDPOINTS[groupBy];
+  const enabled =
+    !options?.cacheOnly ||
+    [...cache.keys()].includes(
+      `${baseApiPath}?${editQueryString(queryString, {
+        ...(typeof groupByOrParams === "string"
+          ? { groupBy: groupByOrParams }
+          : groupByOrParams),
+      })}`,
+    );
 
   const { data } = useSWR<Record<string, any>[]>(
-    `${baseApiPath}?${editQueryString(
-      queryString,
-      {
-        groupBy,
-      },
-      singular ?? undefined,
-    )}`,
+    enabled
+      ? `${baseApiPath}?${editQueryString(queryString, {
+          ...(typeof groupByOrParams === "string"
+            ? { groupBy: groupByOrParams }
+            : groupByOrParams),
+        })}`
+      : null,
     fetcher,
     {
       shouldRetryOnError: !requiresUpgrade,
