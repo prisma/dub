@@ -1,10 +1,18 @@
 import {
   EVENT_TYPES,
+  OLD_ANALYTICS_ENDPOINTS,
+  OLD_TO_NEW_ANALYTICS_ENDPOINTS,
   VALID_ANALYTICS_ENDPOINTS,
   intervals,
 } from "@/lib/analytics/constants";
 import z from "@/lib/zod";
-import { COUNTRY_CODES, capitalize } from "@dub/utils";
+import {
+  COUNTRY_CODES,
+  DUB_FOUNDING_DATE,
+  PAGINATION_LIMIT,
+  capitalize,
+  formatDate,
+} from "@dub/utils";
 import { booleanQuerySchema } from "./misc";
 import { parseDateSchema } from "./utils";
 
@@ -35,10 +43,23 @@ const analyticsGroupBy = z
     "The parameter to group the analytics data points by. Defaults to 'count' if undefined.",
   );
 
+const oldAnalyticsEndpoints = z
+  .enum(OLD_ANALYTICS_ENDPOINTS, {
+    errorMap: (_issue, _ctx) => {
+      return {
+        message: `Invalid type value. Valid values are: ${OLD_ANALYTICS_ENDPOINTS.join(", ")}`,
+      };
+    },
+  })
+  .transform((v) => OLD_TO_NEW_ANALYTICS_ENDPOINTS[v] || v);
+
 // For backwards compatibility
 export const analyticsPathParamsSchema = z.object({
-  eventType: analyticsEvents.removeDefault().optional(),
-  endpoint: analyticsGroupBy.removeDefault().optional(),
+  eventType: analyticsEvents
+    .removeDefault()
+    .or(oldAnalyticsEndpoints)
+    .optional(),
+  endpoint: oldAnalyticsEndpoints.optional(),
 });
 
 // Query schema for /api/analytics endpoint
@@ -64,15 +85,9 @@ export const analyticsQuerySchema = z.object({
       "The interval to retrieve analytics for. Takes precedence over start and end. If undefined, defaults to 24h.",
     ),
   start: parseDateSchema
-    .refine(
-      (value: Date) => {
-        const foundingDate = new Date("2022-09-22T00:00:00.000Z"); // Dub.co founding date
-        return value >= foundingDate;
-      },
-      {
-        message: "The start date cannot be earlier than September 22, 2022.",
-      },
-    )
+    .refine((value: Date) => value >= DUB_FOUNDING_DATE, {
+      message: `The start date cannot be earlier than ${formatDate(DUB_FOUNDING_DATE)}.`,
+    })
     .optional()
     .describe("The start date and time when to retrieve analytics from."),
   end: parseDateSchema
@@ -96,88 +111,30 @@ export const analyticsQuerySchema = z.object({
     .string()
     .optional()
     .describe("The city to retrieve analytics for.")
-    .openapi({
-      examples: [
-        "New York",
-        "Los Angeles",
-        "Chicago",
-        "Houston",
-        "Phoenix",
-        "Philadelphia",
-        "San Antonio",
-        "San Diego",
-        "Dallas",
-        "Tokyo",
-        "Delhi",
-        "Shanghai",
-        "São Paulo",
-        "Mumbai",
-        "Beijing",
-      ],
-    }),
+    .openapi({ example: "New York" }),
   device: z
     .string()
     .optional()
     .transform((v) => capitalize(v) as string | undefined)
     .describe("The device to retrieve analytics for.")
-    .openapi({
-      examples: ["Desktop", "Mobile", "Tablet", "Wearable", "Smarttv"],
-    }),
+    .openapi({ example: "Desktop" }),
   browser: z
     .string()
     .optional()
     .transform((v) => capitalize(v) as string | undefined)
     .describe("The browser to retrieve analytics for.")
-    .openapi({
-      examples: [
-        "Chrome",
-        "Mobile Safari",
-        "Edge",
-        "Instagram",
-        "Firefox",
-        "Facebook",
-        "WebKit",
-        "Samsung Browser",
-        "Chrome WebView",
-        "Safari",
-        "Opera",
-        "IE",
-        "Yandex",
-      ],
-    }),
+    .openapi({ example: "Chrome" }),
   os: z
     .string()
     .optional()
     .transform((v) => capitalize(v) as string | undefined)
     .describe("The OS to retrieve analytics for.")
-    .openapi({
-      examples: [
-        "Windows",
-        "iOS",
-        "Android",
-        "Mac OS",
-        "Linux",
-        "Ubuntu",
-        "Chromium OS",
-        "Fedora",
-      ],
-    }),
+    .openapi({ example: "Windows" }),
   referer: z
     .string()
     .optional()
     .describe("The referer to retrieve analytics for.")
-    .openapi({
-      examples: [
-        "(direct)",
-        "t.co",
-        "youtube.com",
-        "perplexity.ai",
-        "l.instagram.com",
-        "m.facebook.com",
-        "linkedin.com",
-        "google.com",
-      ],
-    }),
+    .openapi({ example: "google.com" }),
   url: z.string().optional().describe("The URL to retrieve analytics for."),
   tagId: z
     .string()
@@ -228,5 +185,27 @@ export const analyticsFilterTB = z
       referer: true,
       tagId: true,
       url: true,
+    }),
+  );
+
+export const eventsFilterTB = analyticsFilterTB
+  .omit({ granularity: true, timezone: true, page: true })
+  .and(
+    z.object({
+      offset: z.coerce.number().default(0),
+      limit: z.coerce.number().default(PAGINATION_LIMIT),
+      order: z.enum(["asc", "desc"]).default("desc"),
+      sortBy: z.enum(["timestamp", "amount"]).default("timestamp"),
+    }),
+  );
+
+export const eventsQuerySchema = analyticsQuerySchema
+  .omit({ groupBy: true })
+  .and(
+    z.object({
+      page: z.coerce.number().default(0),
+      limit: z.coerce.number().default(PAGINATION_LIMIT),
+      order: z.enum(["asc", "desc"]).default("desc"),
+      sortBy: z.enum(["timestamp", "amount"]).default("timestamp"),
     }),
   );

@@ -3,14 +3,21 @@ import {
   exceededLimitError,
   handleAndReturnErrorResponse,
 } from "@/lib/api/errors";
-import { PlanProps, WorkspaceProps } from "@/lib/types";
+import { BetaFeatures, PlanProps, WorkspaceProps } from "@/lib/types";
 import { ratelimit } from "@/lib/upstash";
 import { API_DOMAIN, getSearchParams } from "@dub/utils";
 import { waitUntil } from "@vercel/functions";
 import { StreamingTextResponse } from "ai";
 import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
-import { isBetaTester } from "../edge-config";
+import { throwIfNoAccess } from "../api/tokens/permissions";
+import {
+  PermissionAction,
+  Scope,
+  getPermissionsByRole,
+  mapScopesToPermissions,
+} from "../api/tokens/scopes";
+import { getFeatureFlags } from "../edge-config";
 import { prismaEdge } from "../prisma/edge";
 import { hashToken } from "./hash-token";
 import type { Session } from "./utils";
@@ -23,6 +30,7 @@ interface WithWorkspaceEdgeHandler {
     headers,
     session,
     workspace,
+    permissions,
   }: {
     req: Request;
     params: Record<string, string>;
@@ -30,6 +38,7 @@ interface WithWorkspaceEdgeHandler {
     headers?: Record<string, string>;
     session: Session;
     workspace: WorkspaceProps;
+    permissions: PermissionAction[];
   }): Promise<Response | StreamingTextResponse>;
 }
 
@@ -45,20 +54,18 @@ export const withWorkspaceEdge = (
       "business extra",
       "enterprise",
     ], // if the action needs a specific plan
-    requiredRole = ["owner", "member"],
     needNotExceededClicks, // if the action needs the user to not have exceeded their clicks usage
     needNotExceededLinks, // if the action needs the user to not have exceeded their links usage
     needNotExceededAI, // if the action needs the user to not have exceeded their AI usage
-    allowSelf, // special case for removing yourself from a workspace
-    betaFeature, // if the action is a beta feature
+    featureFlag, // if the action needs a specific feature flag
+    requiredPermissions = [],
   }: {
     requiredPlan?: Array<PlanProps>;
-    requiredRole?: Array<"owner" | "member">;
     needNotExceededClicks?: boolean;
     needNotExceededLinks?: boolean;
     needNotExceededAI?: boolean;
-    allowSelf?: boolean;
-    betaFeature?: boolean;
+    featureFlag?: BetaFeatures;
+    requiredPermissions?: PermissionAction[];
   } = {},
 ) => {
   return async (
@@ -86,6 +93,9 @@ export const withWorkspaceEdge = (
       let session: Session | undefined;
       let workspaceId: string | undefined;
       let workspaceSlug: string | undefined;
+      let permissions: PermissionAction[] = [];
+      let token: any | null = null;
+      const isRestrictedToken = apiKey?.startsWith("dub_");
 
       const idOrSlug =
         params?.idOrSlug ||
@@ -93,8 +103,9 @@ export const withWorkspaceEdge = (
         params?.slug ||
         searchParams.projectSlug;
 
-      // if there's no workspace ID or slug
-      if (!idOrSlug) {
+      // if there's no workspace ID or slug and it's not a restricted token
+      // For restricted tokens, we find the workspaceId from the token
+      if (!idOrSlug && !isRestrictedToken) {
         throw new DubApiError({
           code: "not_found",
           message:
@@ -102,38 +113,55 @@ export const withWorkspaceEdge = (
         });
       }
 
-      if (idOrSlug.startsWith("ws_")) {
-        workspaceId = idOrSlug.replace("ws_", "");
-      } else {
-        workspaceSlug = idOrSlug;
+      if (idOrSlug) {
+        if (idOrSlug.startsWith("ws_")) {
+          workspaceId = idOrSlug.replace("ws_", "");
+        } else {
+          workspaceSlug = idOrSlug;
+        }
       }
 
       if (apiKey) {
         const hashedKey = await hashToken(apiKey);
-
-        const token = await prismaEdge.token.findUnique({
+        const prismaArgs = {
           where: {
             hashedKey,
           },
           select: {
+            ...(isRestrictedToken && {
+              scopes: true,
+              rateLimit: true,
+              projectId: true,
+            }),
             user: {
               select: {
                 id: true,
                 name: true,
                 email: true,
+                isMachine: true,
               },
             },
           },
-        });
-        if (!token) {
+        };
+
+        if (isRestrictedToken) {
+          token = await prismaEdge.restrictedToken.findUnique(prismaArgs);
+        } else {
+          token = await prismaEdge.token.findUnique(prismaArgs);
+        }
+
+        if (!token || !token.user) {
           throw new DubApiError({
             code: "unauthorized",
             message: "Unauthorized: Invalid API key.",
           });
         }
 
+        // Rate limit checks for API keys
+        const rateLimit = token?.rateLimit || 600;
+
         const { success, limit, reset, remaining } = await ratelimit(
-          600,
+          rateLimit,
           "1 m",
         ).limit(apiKey);
         headers = {
@@ -149,21 +177,38 @@ export const withWorkspaceEdge = (
             message: "Too many requests.",
           });
         }
+
+        // Find workspaceId if it's a restricted token
+        if (isRestrictedToken) {
+          workspaceId = token.projectId;
+        }
+
         waitUntil(
-          prismaEdge.token.update({
-            where: {
-              hashedKey,
-            },
-            data: {
-              lastUsed: new Date(),
-            },
-          }),
+          // update last used time for the token
+          (async () => {
+            const prismaArgs = {
+              where: {
+                hashedKey,
+              },
+              data: {
+                lastUsed: new Date(),
+              },
+            };
+
+            if (isRestrictedToken) {
+              await prismaEdge.restrictedToken.update(prismaArgs);
+            } else {
+              await prismaEdge.token.update(prismaArgs);
+            }
+          })(),
         );
+
         session = {
           user: {
             id: token.user.id,
             name: token.user.name || "",
             email: token.user.email || "",
+            isMachine: token.user.isMachine,
           },
         };
       } else {
@@ -196,25 +241,51 @@ export const withWorkspaceEdge = (
           },
           domains: {
             select: {
+              id: true,
               slug: true,
               primary: true,
+              verified: true,
             },
           },
         },
       })) as WorkspaceProps;
 
+      // workspace doesn't exist
       if (!workspace || !workspace.users) {
-        // workspace doesn't exist
         throw new DubApiError({
           code: "not_found",
           message: "Workspace not found.",
         });
       }
 
+      // Machine users have owner role by default
+      // Only workspace owners can create machine users
+      if (session.user.isMachine) {
+        workspace.users[0].role = "owner";
+      }
+
+      permissions = getPermissionsByRole(workspace.users[0].role);
+
+      // Find the subset of permissions that the user has access to based on the token scopes
+      if (isRestrictedToken) {
+        const tokenScopes: Scope[] = token.scopes.split(" ") || [];
+        permissions = mapScopesToPermissions(tokenScopes).filter((p) =>
+          permissions.includes(p),
+        );
+      }
+
+      // Check user has permission to make the action
+      throwIfNoAccess({
+        permissions,
+        requiredPermissions,
+        workspaceId: workspace.id,
+      });
+
       // beta feature checks
-      if (betaFeature) {
-        const betaTester = await isBetaTester(workspace.id);
-        if (!betaTester) {
+      if (featureFlag) {
+        const flags = await getFeatureFlags(workspace.id);
+
+        if (!flags[featureFlag]) {
           throw new DubApiError({
             code: "forbidden",
             message: "Unauthorized: Beta feature.",
@@ -251,17 +322,6 @@ export const withWorkspaceEdge = (
             message: "Workspace invite pending.",
           });
         }
-      }
-
-      // workspace role checks
-      if (
-        !requiredRole.includes(workspace.users[0].role) &&
-        !(allowSelf && searchParams.userId === session.user.id)
-      ) {
-        throw new DubApiError({
-          code: "forbidden",
-          message: "Unauthorized: Insufficient permissions.",
-        });
       }
 
       // clicks usage overage checks
@@ -332,6 +392,7 @@ export const withWorkspaceEdge = (
         headers,
         session,
         workspace,
+        permissions,
       });
     } catch (error) {
       return handleAndReturnErrorResponse(error, headers);

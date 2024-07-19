@@ -4,10 +4,12 @@ SQL >
     SELECT
         timestamp,
         event_id,
+        event_name,
         click_id,
         link_id,
         customer_id,
         payment_processor,
+        invoice_id,
         amount,
         url,
         country,

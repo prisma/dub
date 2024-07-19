@@ -3,6 +3,7 @@ import { metaTagsSchema } from "@/lib/zod/schemas/metatags";
 import { DirectorySyncProviders } from "@boxyhq/saml-jackson";
 import { Link } from "@prisma/client";
 import { createLinkBodySchema } from "./zod/schemas/links";
+import { tokenSchema } from "./zod/schemas/token";
 
 export type LinkProps = Link;
 
@@ -24,7 +25,7 @@ export interface QRLinkProps {
 
 export interface RedisLinkProps {
   id: string;
-  url: string;
+  url?: string;
   trackConversion?: boolean;
   password?: boolean;
   proxy?: boolean;
@@ -35,6 +36,7 @@ export interface RedisLinkProps {
   ios?: string;
   android?: string;
   geo?: object;
+  doIndex?: boolean;
   projectId?: string;
 }
 
@@ -66,6 +68,8 @@ export type PlanProps = (typeof plans)[number];
 
 export type RoleProps = (typeof roles)[number];
 
+export type BetaFeatures = "conversions" | "integrations" | "dublink";
+
 export interface WorkspaceProps {
   id: string;
   name: string;
@@ -86,18 +90,21 @@ export interface WorkspaceProps {
   stripeConnectId: string | null;
   createdAt: Date;
   domains: {
+    id: string;
     slug: string;
     primary: boolean;
+    verified: boolean;
   }[];
   users: {
     role: RoleProps;
   }[];
-  metadata?: {
-    defaultDomains?: string[];
-  };
   inviteCode: string;
-  betaTester?: boolean;
+  flags?: {
+    [key in BetaFeatures]: boolean;
+  };
 }
+
+export type WorkspaceWithUsers = Omit<WorkspaceProps, "domains">;
 
 export interface UserProps {
   id: string;
@@ -108,6 +115,7 @@ export interface UserProps {
   source: string | null;
   migratedWorkspace: string | null;
   defaultWorkspace?: string;
+  isMachine: boolean;
 }
 
 export interface WorkspaceUserProps extends UserProps {
@@ -128,22 +136,9 @@ export interface DomainProps {
   verified: boolean;
   primary: boolean;
   archived: boolean;
-  publicStats: boolean;
-  target?: string;
-  type: string;
   placeholder?: string;
-  clicks: number;
-  projectId: string;
   expiredUrl?: string;
-  noindex?: boolean;
-}
-export interface RedisDomainProps {
-  id: string;
-  url?: string;
-  rewrite?: boolean;
-  iframeable?: boolean;
   projectId: string;
-  noindex?: boolean;
 }
 
 export interface BitlyGroupProps {
@@ -174,7 +169,10 @@ export type NewLinkProps = z.infer<typeof createLinkBodySchema>;
 
 type ProcessedLinkOverrides = "domain" | "key" | "url" | "projectId";
 export type ProcessedLinkProps = Omit<NewLinkProps, ProcessedLinkOverrides> &
-  Pick<LinkProps, ProcessedLinkOverrides> & { userId?: LinkProps["userId"] };
+  Pick<LinkProps, ProcessedLinkOverrides> & { userId?: LinkProps["userId"] } & {
+    createdAt?: Date;
+    id?: string;
+  };
 
 export const plans = [
   "free",
@@ -199,3 +197,5 @@ export const tagColors = [
 ] as const;
 
 export type MetaTag = z.infer<typeof metaTagsSchema>;
+
+export type TokenProps = z.infer<typeof tokenSchema>;
