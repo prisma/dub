@@ -78,7 +78,7 @@ export const trackLead = async ({
   let isDuplicateEvent = false;
 
   // if not deferred mode, we need to deduplicate lead events – only record 1 unique event for the same customer and event name
-  // TODO: Maybe we can replace this to rely only on MySQL directly since we're checking the customer above?
+  // TODO: Maybe we can replace this to rely only on Postgres directly since we're checking the customer above?
   if (mode !== "deferred") {
     const res = await redis.set(
       `trackLead:${workspace.id}:${customerExternalId}:${stringifiedEventName}`,
@@ -166,7 +166,7 @@ export const trackLead = async ({
         : basePayload;
     };
 
-    // if the customer doesn't exist in our MySQL DB yet, upsert it
+    // if the customer doesn't exist in our Postgres DB yet, upsert it
     // (here we're doing upsert and not create in case of race conditions)
     if (!customer) {
       customer = await prisma.customer.upsert({

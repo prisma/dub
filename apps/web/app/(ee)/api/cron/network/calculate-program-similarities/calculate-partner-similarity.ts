@@ -13,15 +13,15 @@ export async function calculatePartnerSimilarity(
 ): Promise<number> {
   const [result] = await prisma.$queryRaw<PartnerSimilarityResult[]>`
     SELECT 
-      COUNT(DISTINCT CASE WHEN e1.partnerId IS NOT NULL AND e2.partnerId IS NOT NULL THEN e1.partnerId END) AS sharedPartnersCount,
-      (SELECT COUNT(*) FROM ProgramEnrollment WHERE programId = ${program1Id}) AS program1PartnersCount,
-      (SELECT COUNT(*) FROM ProgramEnrollment WHERE programId = ${program2Id}) AS program2PartnersCount
+      COUNT(DISTINCT CASE WHEN e1."partnerId" IS NOT NULL AND e2."partnerId" IS NOT NULL THEN e1."partnerId" END) AS "sharedPartnersCount",
+      (SELECT COUNT(*) FROM "ProgramEnrollment" WHERE "programId" = ${program1Id}) AS "program1PartnersCount",
+      (SELECT COUNT(*) FROM "ProgramEnrollment" WHERE "programId" = ${program2Id}) AS "program2PartnersCount"
     FROM
-      ProgramEnrollment e1
+      "ProgramEnrollment" e1
     JOIN
-      ProgramEnrollment e2 ON e1.partnerId = e2.partnerId
+      "ProgramEnrollment" e2 ON e1."partnerId" = e2."partnerId"
     WHERE
-      e1.programId = ${program1Id} AND e2.programId = ${program2Id}
+      e1."programId" = ${program1Id} AND e2."programId" = ${program2Id}
   `;
 
   const { sharedPartnersCount, program1PartnersCount, program2PartnersCount } =

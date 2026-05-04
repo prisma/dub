@@ -13,7 +13,7 @@ import { ExpandedLink, transformLink } from "../api/links/utils/transform-link";
 import { detectBot } from "../middleware/utils/detect-bot";
 import { detectQr } from "../middleware/utils/detect-qr";
 import { getIdentityHash } from "../middleware/utils/get-identity-hash";
-import { conn } from "../planetscale";
+import { conn } from "../postgres";
 import { WorkspaceProps } from "../types";
 import { redis } from "../upstash";
 import { publishPartnerActivityEvent } from "../upstash/redis-streams/partner-activity";
@@ -102,7 +102,7 @@ export async function recordClick({
       }
     } catch (error) {
       console.error(`[recordClickCache error]: ${error}`);
-      // if redis fails, return null so we don't overwhelm TB/MySQL
+      // if redis fails, return null so we don't overwhelm TB/Postgres
       return null;
     }
   }
@@ -192,9 +192,11 @@ export async function recordClick({
         recordClickCache.set({ domain, key, identityHash, clickId }),
 
         // increment the click count for the link (based on their ID)
-        // we have to use planetscale connection directly (not prismaEdge) because of connection pooling
+        // use a direct Postgres connection here because of connection pooling
         conn.execute(
-          "UPDATE Link SET clicks = clicks + 1, lastClicked = NOW() WHERE id = ?",
+          `UPDATE "Link"
+           SET clicks = clicks + 1, "lastClicked" = NOW()
+           WHERE id = ?`,
           [linkId],
         ),
         // if the link is associated with a workspace + has a destination URL
@@ -208,7 +210,10 @@ export async function recordClick({
           }).catch(() => {
             // Fallback on writing directly to the database
             return conn.execute(
-              "UPDATE Project p JOIN Link l ON p.id = l.projectId SET p.usage = p.usage + 1, p.totalClicks = p.totalClicks + 1 WHERE l.id = ?",
+              `UPDATE "Project" p
+               SET usage = p.usage + 1, "totalClicks" = p."totalClicks" + 1
+               FROM "Link" l
+               WHERE p.id = l."projectId" AND l.id = ?`,
               [linkId],
             );
           }),
@@ -223,7 +228,9 @@ export async function recordClick({
           }).catch(() => {
             // Fallback on writing directly to the database
             return conn.execute(
-              "UPDATE ProgramEnrollment SET totalClicks = totalClicks + 1 WHERE programId = ? AND partnerId = ?",
+              `UPDATE "ProgramEnrollment"
+               SET "totalClicks" = "totalClicks" + 1
+               WHERE "programId" = ? AND "partnerId" = ?`,
               [programId, partnerId],
             );
           }),
@@ -265,7 +272,7 @@ export async function recordClick({
       const hasWebhooks = webhookIds && webhookIds.length > 0;
       if (workspaceId && hasWebhooks) {
         const workspaceRows = await conn.execute(
-          "SELECT usage, usageLimit FROM Project WHERE id = ? LIMIT 1",
+          `SELECT usage, "usageLimit" FROM "Project" WHERE id = ? LIMIT 1`,
           [workspaceId],
         );
 
@@ -326,15 +333,18 @@ async function sendLinkClickWebhooks({
       `
     SELECT 
       l.*,
-      JSON_ARRAYAGG(
-        IF(t.id IS NOT NULL,
-          JSON_OBJECT('tag', JSON_OBJECT('id', t.id, 'name', t.name, 'color', t.color)),
-          NULL
-        )
+      COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'tag',
+            jsonb_build_object('id', t.id, 'name', t.name, 'color', t.color)
+          )
+        ) FILTER (WHERE t.id IS NOT NULL),
+        '[]'::jsonb
       ) as tags
-    FROM Link l
-    LEFT JOIN LinkTag lt ON l.id = lt.linkId
-    LEFT JOIN Tag t ON lt.tagId = t.id
+    FROM "Link" l
+    LEFT JOIN "LinkTag" lt ON l.id = lt."linkId"
+    LEFT JOIN "Tag" t ON lt."tagId" = t.id
     WHERE l.id = ?
     GROUP BY l.id
   `,
@@ -342,7 +352,7 @@ async function sendLinkClickWebhooks({
     )
     .then((res) => {
       const row = res.rows[0] as any;
-      // Handle case where there are no tags (JSON_ARRAYAGG returns [null])
+      // Handle legacy/null aggregation responses defensively.
       row.tags = row.tags?.[0] === null ? [] : row.tags;
       return row;
     });

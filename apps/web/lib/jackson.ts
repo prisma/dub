@@ -5,7 +5,7 @@ import type {
   JacksonOption,
 } from "@boxyhq/saml-jackson";
 import samlJackson from "@boxyhq/saml-jackson";
-import { APP_DOMAIN_WITH_NGROK } from "@dub/utils";
+import { APP_DOMAIN_WITH_NGROK } from "@dub/utils/src/constants";
 
 export const samlAudience = "https://saml.dub.co";
 
@@ -20,8 +20,8 @@ const opts: JacksonOption = {
       : "/api/auth/saml/callback",
   samlAudience,
   db: {
-    engine: "planetscale",
-    type: "mysql",
+    engine: "sql",
+    type: "postgres",
     url: process.env.DATABASE_URL as string,
     ssl: {
       rejectUnauthorized: false,

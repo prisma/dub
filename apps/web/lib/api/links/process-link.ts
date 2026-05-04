@@ -1,6 +1,6 @@
 import { isBlacklistedDomain } from "@/lib/edge-config";
 import { verifyFolderAccess } from "@/lib/folder/permissions";
-import { checkIfUserExists, getRandomKey } from "@/lib/planetscale";
+import { checkIfUserExists, getRandomKey } from "@/lib/postgres";
 import { isNotHostedImage } from "@/lib/storage";
 import { NewLinkProps, ProcessedLinkProps } from "@/lib/types";
 import { prisma } from "@dub/prisma";

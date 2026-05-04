@@ -1,11 +1,24 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const prismaClientSingleton = () =>
-  new PrismaClient({
+const getPrismaOptions = () => {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  return {
+    ...(databaseUrl
+      ? {
+          adapter: new PrismaPg({
+            connectionString: databaseUrl,
+          }),
+        }
+      : {}),
     omit: {
       user: { passwordHash: true },
     },
-  });
+  };
+};
+
+const prismaClientSingleton = () => new PrismaClient(getPrismaOptions());
 
 type OmittedPrismaClient = ReturnType<typeof prismaClientSingleton>;
 

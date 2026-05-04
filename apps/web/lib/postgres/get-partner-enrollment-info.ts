@@ -31,21 +31,21 @@ export const getPartnerEnrollmentInfo = async ({
 
   const { rows } = await conn.execute<QueryResult>(
     `SELECT 
-      Partner.id,
-      Partner.name,
-      Partner.image,
-      Discount.id as discountId,
-      Discount.amount,
-      Discount.type,
-      Discount.maxDuration,
-      Discount.couponId,
-      Discount.couponTestId,
-      ProgramEnrollment.groupId,
-      ProgramEnrollment.tenantId
-    FROM ProgramEnrollment
-    LEFT JOIN Partner ON Partner.id = ProgramEnrollment.partnerId
-    LEFT JOIN Discount ON Discount.id = ProgramEnrollment.discountId
-    WHERE ProgramEnrollment.partnerId = ? AND ProgramEnrollment.programId = ? LIMIT 1`,
+      p.id,
+      p.name,
+      p.image,
+      d.id as "discountId",
+      d.amount,
+      d.type,
+      d."maxDuration",
+      d."couponId",
+      d."couponTestId",
+      pe."groupId",
+      pe."tenantId"
+    FROM "ProgramEnrollment" pe
+    LEFT JOIN "Partner" p ON p.id = pe."partnerId"
+    LEFT JOIN "Discount" d ON d.id = pe."discountId"
+    WHERE pe."partnerId" = ? AND pe."programId" = ? LIMIT 1`,
     [partnerId, programId],
   );
 

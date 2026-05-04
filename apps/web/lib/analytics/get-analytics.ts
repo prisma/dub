@@ -4,7 +4,7 @@ import { FolderAccessLevel } from "@dub/prisma/client";
 import { linkConstructor, punyEncode } from "@dub/utils";
 import * as z from "zod/v4";
 import { decodeKeyIfCaseSensitive } from "../api/links/case-sensitivity";
-import { conn } from "../planetscale";
+import { conn } from "../postgres";
 import { analyticsFilterTB } from "../zod/schemas/analytics";
 import { analyticsResponse } from "../zod/schemas/analytics-response";
 import {
@@ -25,8 +25,8 @@ import { getStartEndDates } from "./utils/get-start-end-dates";
 // Fetch data for /api/analytics
 export const getAnalytics = async (params: AnalyticsFilters) => {
   let {
-    event,
-    groupBy,
+    event = "clicks",
+    groupBy = "count",
     workspaceId,
     linkId,
     interval,
@@ -61,15 +61,21 @@ export const getAnalytics = async (params: AnalyticsFilters) => {
     )
   ) {
     const linkIdPlaceholders = normalizedLinkId.values.map(() => "?").join(",");
+    const aggregateColumnMap: Record<string, string> = {
+      clicks: `SUM(clicks) AS clicks`,
+      leads: `SUM(leads) AS leads`,
+      sales: `SUM(sales) AS sales`,
+      saleAmount: `SUM("saleAmount") AS "saleAmount"`,
+    };
     const aggregateColumns =
       event === "composite"
-        ? `SUM(clicks) as clicks, SUM(leads) as leads, SUM(sales) as sales, SUM(saleAmount) as saleAmount`
+        ? `${aggregateColumnMap.clicks}, ${aggregateColumnMap.leads}, ${aggregateColumnMap.sales}, ${aggregateColumnMap.saleAmount}`
         : event === "sales"
-          ? `SUM(sales) as sales, SUM(saleAmount) as saleAmount`
-          : `SUM(${event}) as ${event}`;
+          ? `${aggregateColumnMap.sales}, ${aggregateColumnMap.saleAmount}`
+          : aggregateColumnMap[event];
 
     const response = await conn.execute(
-      `SELECT ${aggregateColumns} FROM Link WHERE id IN (${linkIdPlaceholders})`,
+      `SELECT ${aggregateColumns} FROM "Link" WHERE id IN (${linkIdPlaceholders})`,
       normalizedLinkId.values,
     );
 

@@ -59,7 +59,7 @@ export const POST = withWorkspace(
         async (tx) => {
           const result = await tx.$queryRaw<
             Array<{ foldersUsage: number; foldersLimit: number }>
-          >`SELECT foldersUsage, foldersLimit FROM Project WHERE id = ${workspace.id} FOR UPDATE`;
+          >`SELECT "foldersUsage", "foldersLimit" FROM "Project" WHERE id = ${workspace.id} FOR UPDATE`;
 
           const { foldersUsage, foldersLimit } = result[0];
 

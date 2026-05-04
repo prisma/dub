@@ -1,6 +1,6 @@
 import { prisma } from "@dub/prisma";
 import "dotenv-flow/config";
-import { conn } from "../../lib/planetscale";
+import { conn } from "../../lib/postgres";
 import { stripeConnectClient } from "../stripe/connect-client";
 
 async function main() {
@@ -53,7 +53,7 @@ async function main() {
   console.log("Deleted program enrollments", deletedProgramEnrollments);
 
   // using conn.execute here since Prisma is throwing a weird error
-  const res = await conn.execute(`DELETE FROM Partner WHERE id = ?`, [
+  const res = await conn.execute(`DELETE FROM "Partner" WHERE id = ?`, [
     partner.id,
   ]);
   console.log(JSON.stringify(res, null, 2));

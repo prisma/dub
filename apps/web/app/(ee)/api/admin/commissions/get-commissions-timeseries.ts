@@ -1,4 +1,7 @@
-import { sqlGranularityMap } from "@/lib/planetscale/granularity";
+import {
+  pgDateBucket,
+  sqlGranularityMap,
+} from "@/lib/postgres/granularity";
 import { TZDate } from "@date-fns/tz";
 import { prisma } from "@dub/prisma";
 import { Prisma } from "@dub/prisma/client";
@@ -27,15 +30,15 @@ export async function getCommissionsTimeseries({
     sqlGranularityMap[granularity];
 
   const commissions = await prisma.$queryRaw<Commission[]>`
-        SELECT 
-          DATE_FORMAT(CONVERT_TZ(createdAt, "UTC", ${timezone || "UTC"}), ${dateFormat}) AS start, 
+        SELECT
+          ${pgDateBucket({ column: Prisma.sql`"createdAt"`, timezone: timezone || "UTC", dateFormat })} AS start,
           SUM(earnings) AS commissions
-        FROM Commission
-        WHERE 
-          createdAt >= ${startDate}
-          AND createdAt < ${endDate}
-          AND status IN ("pending", "processed", "paid")
-          AND ${programId ? Prisma.sql`programId = ${programId}` : Prisma.sql`programId != ${ACME_PROGRAM_ID}`}
+        FROM "Commission"
+        WHERE
+          "createdAt" >= ${startDate}
+          AND "createdAt" < ${endDate}
+          AND status IN ('pending', 'processed', 'paid')
+          AND ${programId ? Prisma.sql`"programId" = ${programId}` : Prisma.sql`"programId" != ${ACME_PROGRAM_ID}`}
         GROUP BY start
         ORDER BY start ASC;`;
 

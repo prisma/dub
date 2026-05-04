@@ -1,13 +1,14 @@
-import { Client } from "@planetscale/database";
-import { PrismaPlanetScale } from "@prisma/adapter-planetscale";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const client = new Client({
-  url: process.env.PLANETSCALE_DATABASE_URL || process.env.DATABASE_URL,
-});
-
-const adapter = new PrismaPlanetScale(client);
+const databaseUrl = process.env.DATABASE_URL;
 
 export const prismaEdge = new PrismaClient({
-  adapter,
+  ...(databaseUrl
+    ? {
+        adapter: new PrismaPg({
+          connectionString: databaseUrl,
+        }),
+      }
+    : {}),
 });

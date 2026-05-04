@@ -71,7 +71,7 @@ export async function POST(req: Request) {
             ),
           ),
 
-        // Remove the link from MySQL
+        // Remove the link from Postgres
         prisma.link.deleteMany({
           where: {
             id: { in: links.map((link) => link.id) },

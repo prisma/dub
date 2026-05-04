@@ -2,7 +2,7 @@ model Link {
   id              String    @id @default(cuid())
   domain          String // domain of the link (e.g. dub.sh) – also stored on Redis
   key             String // key of the link (e.g. /github) – also stored on Redis
-  url             String    @db.LongText // target url (e.g. https://github.com/dubinc/dub) – also stored on Redis
+  url             String    @db.Text // target url (e.g. https://github.com/dubinc/dub) – also stored on Redis
   shortLink       String    @unique @db.VarChar(400) // new column for the full short link
   archived        Boolean   @default(false) // whether the link is archived or not
   expiresAt       DateTime? // when the link expires – stored on Redis via ttl
@@ -13,7 +13,7 @@ model Link {
   proxy           Boolean   @default(false) // Proxy to use custom OG tags (stored on redis) – if false, will use OG tags from target url
   title           String? // OG title for the link (e.g. Dub - open-source link attribution platform)
   description     String?   @db.VarChar(280) // OG description for the link (e.g. The modern link attribution platform for short links, conversion tracking, and affiliate programs.)
-  image           String?   @db.LongText // OG image for the link (e.g. https://d.to/og)
+  image           String?   @db.Text // OG image for the link (e.g. https://d.to/og)
   video           String?   @db.Text // OG video for the link
 
   // UTM parameters
@@ -95,7 +95,7 @@ model Link {
   @@unique([domain, key]) // for getting a link by domain and key
   @@unique([projectId, externalId]) // for getting a link by externalId
   @@index([projectId, tenantId]) // for filtering by tenantId
-  @@index([projectId, url(length: 500)]) // for upserting a link by URL
+  @@index([projectId]) // Postgres URL lookup index lives in postdeploy SQL
   @@index([projectId, folderId, archived, createdAt(sort: Desc)]) // most getLinksForWorkspace queries
   @@index([programId, partnerId]) // for getting a referral link (programId + partnerId)
   @@index(partnerId) // for getting links by partnerId

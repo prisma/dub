@@ -15,7 +15,7 @@ export const getDomainViaEdge = async (domain: string) => {
 
   const { rows } =
     (await conn.execute<EdgeDomainProps>(
-      "SELECT * FROM Domain WHERE slug = ?",
+      `SELECT * FROM "Domain" WHERE "slug" = ?`,
       [domain],
     )) || {};
 

@@ -19,15 +19,15 @@ const getLinkViaEdgeHelper = async ({
     ? // for case sensitive domains, we need to encode the key
       encodeKey(key)
     : // for non-case sensitive domains, we need to make sure that the key is always URI-decoded + punycode-encoded
-      // (cause that's how we store it in MySQL)
+      // (cause that's how we store it)
       punyEncode(decodeURIComponent(key));
 
   const { rows } =
     (await conn.execute(
-      `SELECT Link.*, LinkWebhook.webhookId
-       FROM Link
-       LEFT JOIN LinkWebhook ON Link.id = LinkWebhook.linkId
-       WHERE Link.domain = ? AND Link.\`key\` = ?`,
+      `SELECT l.*, lw."webhookId" AS "webhookId"
+       FROM "Link" l
+       LEFT JOIN "LinkWebhook" lw ON l.id = lw."linkId"
+       WHERE l."domain" = ? AND l."key" = ?`,
       [domain, keyToQuery],
     )) || {};
 

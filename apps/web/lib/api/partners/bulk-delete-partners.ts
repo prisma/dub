@@ -1,4 +1,4 @@
-import { conn } from "@/lib/planetscale";
+import { conn } from "@/lib/postgres";
 import { prisma } from "@dub/prisma";
 import { ACME_PROGRAM_ID } from "@dub/utils";
 import { deleteDiscountCodes } from "../../discounts/delete-discount-code";
@@ -209,7 +209,7 @@ export async function bulkDeletePartners({
   if (deletePartners) {
     // using conn.execute here since Prisma is throwing a weird error
     const res = await conn.execute(
-      `DELETE FROM Partner WHERE id IN (${partnerIds.map(() => "?").join(",")})`,
+      `DELETE FROM "Partner" WHERE id IN (${partnerIds.map(() => "?").join(",")})`,
       partnerIds,
     );
     console.log(JSON.stringify(res, null, 2));

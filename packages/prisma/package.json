@@ -8,17 +8,19 @@
   "scripts": {
     "generate": "npx prisma generate --schema=./schema",
     "push": "npx prisma db push --schema=./schema",
+    "postdeploy:postgres": "tsx ./scripts/postdeploy-postgres.ts",
     "studio": "npx prisma studio --schema=./schema --browser none",
     "prebuild": "pnpm run generate",
     "predev": "pnpm run generate",
     "format": "npx prisma format --schema=./schema"
   },
   "dependencies": {
-    "@planetscale/database": "1.19.0",
-    "@prisma/adapter-planetscale": "6.19.1",
-    "@prisma/client": "6.19.1"
+    "@prisma/adapter-pg": "6.19.1",
+    "@prisma/client": "6.19.1",
+    "pg": "8.16.0"
   },
   "devDependencies": {
+    "@types/pg": "8.11.11",
     "@types/node": "18.11.9",
     "prisma": "6.19.1",
     "tsx": "^4.11.0",
@@ -42,7 +44,7 @@
     "dub",
     "dub.co",
     "prisma",
-    "planetscale"
+    "postgresql"
   ],
   "publishConfig": {
     "access": "public"

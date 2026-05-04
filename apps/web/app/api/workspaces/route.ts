@@ -3,7 +3,7 @@ import { generateRandomString } from "@/lib/api/utils/generate-random-string";
 import { createWorkspaceId } from "@/lib/api/workspaces/create-workspace-id";
 import { prefixWorkspaceId } from "@/lib/api/workspaces/workspace-id";
 import { withSession } from "@/lib/auth";
-import { checkIfUserExists } from "@/lib/planetscale";
+import { checkIfUserExists } from "@/lib/postgres";
 import { storage } from "@/lib/storage";
 import {
   createWorkspaceSchema,

@@ -1,4 +1,4 @@
-import { conn } from "@/lib/planetscale";
+import { conn } from "@/lib/postgres";
 import { redis } from "../redis";
 import { RedisStream } from "./client";
 
@@ -33,7 +33,9 @@ export const publishWorkspaceLinksUsageEvent = async (
     );
     // fallback on writing directly to the database
     return await conn.execute(
-      "UPDATE Project SET linksUsage = linksUsage + ?, totalLinks = totalLinks + ? WHERE id = ?",
+      `UPDATE "Project"
+       SET "linksUsage" = "linksUsage" + ?, "totalLinks" = "totalLinks" + ?
+       WHERE id = ?`,
       [linksCount, linksCount, workspaceId],
     );
   }

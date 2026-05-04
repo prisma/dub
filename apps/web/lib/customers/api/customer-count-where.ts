@@ -36,8 +36,20 @@ export function buildCustomerCountWhere(filters: CustomerCountFilters) {
           ? search.includes("@")
             ? { email: search }
             : {
-                email: { search: sanitizeFullTextSearch(search) },
-                name: { search: sanitizeFullTextSearch(search) },
+                OR: [
+                  {
+                    email: {
+                      contains: sanitizeFullTextSearch(search),
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    name: {
+                      contains: sanitizeFullTextSearch(search),
+                      mode: "insensitive",
+                    },
+                  },
+                ],
               }
           : {}),
     // only filter by country if not grouping by country

@@ -19,62 +19,73 @@ export async function getGroups(filters: GroupFilters) {
     includeExpandedFields,
   } = filters;
 
+  const sortColumnMap = {
+    createdAt: `pg."createdAt"`,
+    totalPartners: `"totalPartners"`,
+    totalClicks: `"totalClicks"`,
+    totalLeads: `"totalLeads"`,
+    totalSales: `"totalSales"`,
+    totalSaleAmount: `"totalSaleAmount"`,
+    totalConversions: `"totalConversions"`,
+    totalCommissions: `"totalCommissions"`,
+  } satisfies Record<typeof sortBy, string>;
+
   const groups = (await prisma.$queryRaw(Prisma.sql`
     SELECT
       pg.id,
-      pg.programId,
+      pg."programId",
       pg.name,
       pg.slug,
       pg.color,
-      pg.clickRewardId,
-      pg.leadRewardId,
-      pg.saleRewardId,
-      pg.discountId,
-      pg.additionalLinks,
-      pg.maxPartnerLinks,
-      pg.linkStructure,
-      pg.applicationFormData,
-      pg.applicationFormPublishedAt,
-      pg.landerData,
-      pg.landerPublishedAt,
+      pg."clickRewardId",
+      pg."leadRewardId",
+      pg."saleRewardId",
+      pg."discountId",
+      pg."additionalLinks",
+      pg."maxPartnerLinks",
+      pg."linkStructure",
+      pg."applicationFormData",
+      pg."applicationFormPublishedAt",
+      pg."landerData",
+      pg."landerPublishedAt",
       pg.logo,
       pg.wordmark,
-      pg.brandColor,
-      pg.holdingPeriodDays,
-      pg.autoApprovePartnersEnabledAt,
-      pg.utmTemplateId,
-      pg.createdAt,
-      pg.updatedAt,
+      pg."brandColor",
+      pg."holdingPeriodDays",
+      pg."autoApprovePartnersEnabledAt",
+      pg."utmTemplateId",
+      pg."createdAt",
+      pg."updatedAt",
       ${
         includeExpandedFields
           ? Prisma.sql`
-        COUNT(DISTINCT pe.partnerId) as totalPartners,
-        COALESCE(SUM(pe.totalClicks), 0) as totalClicks,
-        COALESCE(SUM(pe.totalLeads), 0) as totalLeads,
-        COALESCE(SUM(pe.totalSales), 0) as totalSales,
-        COALESCE(SUM(pe.totalSaleAmount), 0) as totalSaleAmount,
-        COALESCE(SUM(pe.totalConversions), 0) as totalConversions,
-        COALESCE(SUM(pe.totalCommissions), 0) as totalCommissions,
-        COALESCE(SUM(pe.totalSaleAmount), 0) - COALESCE(SUM(pe.totalCommissions), 0) as netRevenue
+        COUNT(DISTINCT pe."partnerId") as "totalPartners",
+        COALESCE(SUM(pe."totalClicks"), 0) as "totalClicks",
+        COALESCE(SUM(pe."totalLeads"), 0) as "totalLeads",
+        COALESCE(SUM(pe."totalSales"), 0) as "totalSales",
+        COALESCE(SUM(pe."totalSaleAmount"), 0) as "totalSaleAmount",
+        COALESCE(SUM(pe."totalConversions"), 0) as "totalConversions",
+        COALESCE(SUM(pe."totalCommissions"), 0) as "totalCommissions",
+        COALESCE(SUM(pe."totalSaleAmount"), 0) - COALESCE(SUM(pe."totalCommissions"), 0) as "netRevenue"
         `
           : Prisma.sql`
-        0 as totalPartners,
-        0 as totalClicks,
-        0 as totalLeads,
-        0 as totalSales,
-        0 as totalSaleAmount,
-        0 as totalConversions,
-        0 as totalCommissions,
-        0 as netRevenue
+        0 as "totalPartners",
+        0 as "totalClicks",
+        0 as "totalLeads",
+        0 as "totalSales",
+        0 as "totalSaleAmount",
+        0 as "totalConversions",
+        0 as "totalCommissions",
+        0 as "netRevenue"
         `
       }
-    FROM PartnerGroup pg
-    ${includeExpandedFields ? Prisma.sql`LEFT JOIN ProgramEnrollment pe ON pe.groupId = pg.id AND pe.status = 'approved'` : Prisma.sql``}
-    WHERE pg.programId = ${programId}
-    ${search ? Prisma.sql`AND (pg.name LIKE ${`%${search}%`} OR pg.slug LIKE ${`%${search}%`})` : Prisma.sql``}
+    FROM "PartnerGroup" pg
+    ${includeExpandedFields ? Prisma.sql`LEFT JOIN "ProgramEnrollment" pe ON pe."groupId" = pg.id AND pe.status = 'approved'` : Prisma.sql``}
+    WHERE pg."programId" = ${programId}
+    ${search ? Prisma.sql`AND (pg.name ILIKE ${`%${search}%`} OR pg.slug ILIKE ${`%${search}%`})` : Prisma.sql``}
     ${groupIds && groupIds.length > 0 ? Prisma.sql`AND pg.id IN (${Prisma.join(groupIds)})` : Prisma.sql``}
     GROUP BY pg.id
-    ORDER BY ${Prisma.raw(sortBy === "createdAt" ? "pg.createdAt" : sortBy)} ${Prisma.raw(sortOrder)}
+    ORDER BY ${Prisma.raw(sortColumnMap[sortBy])} ${Prisma.raw(sortOrder)}
     LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
   `)) satisfies Array<any>;
 

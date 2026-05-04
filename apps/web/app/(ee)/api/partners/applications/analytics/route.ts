@@ -5,7 +5,10 @@ import {
   applicationEventAnalyticsSchema,
 } from "@/lib/application-events/schema";
 import { withWorkspace } from "@/lib/auth";
-import { sqlGranularityMap } from "@/lib/planetscale/granularity";
+import {
+  pgDateBucket,
+  sqlGranularityMap,
+} from "@/lib/postgres/granularity";
 import { ApplicationEventAnalyticsQuery } from "@/lib/types";
 import { TZDate, tz } from "@date-fns/tz";
 import { prisma } from "@dub/prisma";
@@ -52,7 +55,7 @@ export const GET = withWorkspace(async ({ workspace, searchParams }) => {
     timezone: timezoneParam,
   } = parsedFilters;
 
-  // Align with CONVERT_TZ in raw SQL and analyticsQuerySchema default (UTC when omitted).
+  // Align raw SQL bucketing and analyticsQuerySchema default (UTC when omitted).
   const timezone = timezoneParam ?? "UTC";
 
   const { startDate, endDate } = getStartEndDates({
@@ -239,17 +242,17 @@ async function byTimeseries({
   const referralSourceFilter = parseFilterValue(referralSource);
 
   const conditions: Prisma.Sql[] = [
-    Prisma.sql`e.programId = ${programId}`,
-    Prisma.sql`e.visitedAt >= ${startDate}`,
-    Prisma.sql`e.visitedAt < ${endDate}`,
+    Prisma.sql`e."programId" = ${programId}`,
+    Prisma.sql`e."visitedAt" >= ${startDate}`,
+    Prisma.sql`e."visitedAt" < ${endDate}`,
   ];
 
   if (partnerFilter) {
     const list = Prisma.join(partnerFilter.values.map((v) => Prisma.sql`${v}`));
     conditions.push(
       partnerFilter.sqlOperator === "NOT IN"
-        ? Prisma.sql`e.partnerId NOT IN (${list})`
-        : Prisma.sql`e.partnerId IN (${list})`,
+        ? Prisma.sql`e."referredByPartnerId" NOT IN (${list})`
+        : Prisma.sql`e."referredByPartnerId" IN (${list})`,
     );
   }
 
@@ -259,8 +262,8 @@ async function byTimeseries({
     );
     conditions.push(
       referralSourceFilter.sqlOperator === "NOT IN"
-        ? Prisma.sql`e.referralSource NOT IN (${list})`
-        : Prisma.sql`e.referralSource IN (${list})`,
+        ? Prisma.sql`e."referralSource" NOT IN (${list})`
+        : Prisma.sql`e."referralSource" IN (${list})`,
     );
   }
 
@@ -278,13 +281,13 @@ async function byTimeseries({
   const rows = await prisma.$queryRaw<TimeseriesApplicationRow[]>(
     Prisma.sql`
       SELECT
-        DATE_FORMAT(CONVERT_TZ(e.visitedAt, "UTC", ${tzId}), ${dateFormat}) AS start,
-        COUNT(e.visitedAt) AS visits,
-        COUNT(e.startedAt) AS starts,
-        COUNT(e.submittedAt) AS submissions,
-        COUNT(e.approvedAt) AS approvals,
-        COUNT(e.rejectedAt) AS rejections
-      FROM ProgramApplicationEvent e
+        ${pgDateBucket({ column: Prisma.sql`e."visitedAt"`, timezone: tzId, dateFormat })} AS start,
+        COUNT(e."visitedAt") AS visits,
+        COUNT(e."startedAt") AS starts,
+        COUNT(e."submittedAt") AS submissions,
+        COUNT(e."approvedAt") AS approvals,
+        COUNT(e."rejectedAt") AS rejections
+      FROM "ProgramApplicationEvent" e
       WHERE ${whereClause}
       GROUP BY start
       ORDER BY start ASC`,

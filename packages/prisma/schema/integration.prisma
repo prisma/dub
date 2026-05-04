@@ -5,7 +5,7 @@ model Integration {
   name        String
   slug        String   @unique
   description String?
-  readme      String?  @db.LongText
+  readme      String?  @db.Text
   developer   String
   website     String
   logo        String?

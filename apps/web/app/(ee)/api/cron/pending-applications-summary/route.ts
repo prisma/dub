@@ -79,25 +79,25 @@ export const GET = withCron(async ({ rawBody }) => {
     }>
   >(Prisma.sql`
     SELECT 
-      pe.programId,
-      p.id as partnerId,
-      p.name as partnerName,
-      p.email as partnerEmail,
-      p.image as partnerImage
+      pe."programId",
+      p.id as "partnerId",
+      p.name as "partnerName",
+      p.email as "partnerEmail",
+      p.image as "partnerImage"
     FROM (
       SELECT 
         id,
-        programId,
-        partnerId,
-        ROW_NUMBER() OVER (PARTITION BY programId ORDER BY createdAt DESC) as rn
-      FROM ProgramEnrollment
-      WHERE programId IN (${Prisma.join(programIds)})
+        "programId",
+        "partnerId",
+        ROW_NUMBER() OVER (PARTITION BY "programId" ORDER BY "createdAt" DESC) as rn
+      FROM "ProgramEnrollment"
+      WHERE "programId" IN (${Prisma.join(programIds)})
         AND status = 'pending'
     ) ranked
-    INNER JOIN ProgramEnrollment pe ON pe.id = ranked.id
-    INNER JOIN Partner p ON p.id = pe.partnerId
+    INNER JOIN "ProgramEnrollment" pe ON pe.id = ranked.id
+    INNER JOIN "Partner" p ON p.id = pe."partnerId"
     WHERE ranked.rn <= 3
-    ORDER BY pe.programId, pe.createdAt DESC
+    ORDER BY pe."programId", pe."createdAt" DESC
   `);
 
   // Group enrollments by programId

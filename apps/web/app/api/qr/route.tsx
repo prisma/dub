@@ -1,14 +1,14 @@
 import { handleAndReturnErrorResponse } from "@/lib/api/errors";
 import { ratelimitOrThrow } from "@/lib/api/utils";
-import { getShortLinkViaEdge, getWorkspaceViaEdge } from "@/lib/planetscale";
-import { getDomainViaEdge } from "@/lib/planetscale/get-domain-via-edge";
+import { getShortLinkViaEdge, getWorkspaceViaEdge } from "@/lib/postgres";
+import { getDomainViaEdge } from "@/lib/postgres/get-domain-via-edge";
 import { QRCodeSVG } from "@/lib/qr/utils";
 import { getQRCodeQuerySchema } from "@/lib/zod/schemas/qr";
 import { DUB_QR_LOGO, getSearchParams, isDubDomain } from "@dub/utils";
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 const CORS_HEADERS = new Headers({
   "Access-Control-Allow-Origin": "*",

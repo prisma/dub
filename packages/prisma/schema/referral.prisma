@@ -29,5 +29,4 @@ model PartnerReferral {
   @@index([programId, partnerId])
   @@index(partnerId)
   @@index(customerId)
-  @@fulltext([email, name])
 }

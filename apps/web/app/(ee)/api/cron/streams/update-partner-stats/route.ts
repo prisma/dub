@@ -1,6 +1,6 @@
 import { handleAndReturnErrorResponse } from "@/lib/api/errors";
 import { verifyVercelSignature } from "@/lib/cron/verify-vercel";
-import { conn } from "@/lib/planetscale";
+import { conn } from "@/lib/postgres";
 import {
   PartnerActivityEvent,
   partnerActivityStream,
@@ -286,9 +286,9 @@ const processPartnerActivityStreamBatch = () =>
               // Update program enrollment stats
               if (finalStatsToUpdate.length > 0) {
                 await conn.execute(
-                  `UPDATE ProgramEnrollment SET ${finalStatsToUpdate
-                    .map(([key, _]) => `${key} = ?`)
-                    .join(", ")} WHERE programId = ? AND partnerId = ?`,
+                  `UPDATE "ProgramEnrollment" SET ${finalStatsToUpdate
+                    .map(([key, _]) => `"${key}" = ?`)
+                    .join(", ")} WHERE "programId" = ? AND "partnerId" = ?`,
                   [
                     ...finalStatsToUpdate.map(([_, value]) =>
                       value instanceof Date

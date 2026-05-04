@@ -1,6 +1,9 @@
 import { getStartEndDates } from "@/lib/analytics/utils/get-start-end-dates";
 import { getProgramEnrollmentOrThrow } from "@/lib/api/programs/get-program-enrollment-or-throw";
-import { sqlGranularityMap } from "@/lib/planetscale/granularity";
+import {
+  pgDateBucket,
+  sqlGranularityMap,
+} from "@/lib/postgres/granularity";
 import { getPartnerEarningsTimeseriesSchema } from "@/lib/zod/schemas/partner-profile";
 import { prisma } from "@dub/prisma";
 import { Prisma } from "@dub/prisma/client";
@@ -50,23 +53,23 @@ export async function getPartnerEarningsTimeseries({
     sqlGranularityMap[granularity];
 
   const query = Prisma.sql`
-        SELECT 
-          DATE_FORMAT(CONVERT_TZ(createdAt, "UTC", ${timezone || "UTC"}), ${dateFormat}) AS start, 
-          ${groupBy ? (groupBy === "type" ? Prisma.sql`type,` : Prisma.sql`linkId,`) : Prisma.sql``}
+        SELECT
+          ${pgDateBucket({ column: Prisma.sql`"createdAt"`, timezone: timezone || "UTC", dateFormat })} AS start,
+          ${groupBy ? (groupBy === "type" ? Prisma.sql`type,` : Prisma.sql`"linkId",`) : Prisma.sql``}
           SUM(earnings) AS earnings
-        FROM Commission
-        WHERE 
+        FROM "Commission"
+        WHERE
           earnings != 0
-          AND programId = ${program.id}
-          AND partnerId = ${partnerId}
-          AND createdAt >= ${startDate}
-          AND createdAt < ${endDate}
+          AND "programId" = ${program.id}
+          AND "partnerId" = ${partnerId}
+          AND "createdAt" >= ${startDate}
+          AND "createdAt" < ${endDate}
           ${type ? Prisma.sql`AND type = ${type}` : Prisma.sql``}
-          ${payoutId ? Prisma.sql`AND payoutId = ${payoutId}` : Prisma.sql``}
-          ${linkId ? Prisma.sql`AND linkId = ${linkId}` : Prisma.sql``}
-          ${customerId ? Prisma.sql`AND customerId = ${customerId}` : Prisma.sql``}
+          ${payoutId ? Prisma.sql`AND "payoutId" = ${payoutId}` : Prisma.sql``}
+          ${linkId ? Prisma.sql`AND "linkId" = ${linkId}` : Prisma.sql``}
+          ${customerId ? Prisma.sql`AND "customerId" = ${customerId}` : Prisma.sql``}
           ${status ? Prisma.sql`AND status = ${status}` : Prisma.sql``}
-          GROUP BY start${groupBy ? (groupBy === "type" ? Prisma.sql`, type` : Prisma.sql`, linkId`) : Prisma.sql``}
+          GROUP BY start${groupBy ? (groupBy === "type" ? Prisma.sql`, type` : Prisma.sql`, "linkId"`) : Prisma.sql``}
         ORDER BY start ASC;
       `;
 

@@ -5,7 +5,7 @@ import { includeProgramEnrollment } from "@/lib/api/links/include-program-enroll
 import { includeTags } from "@/lib/api/links/include-tags";
 import { syncTotalCommissions } from "@/lib/api/partners/sync-total-commissions";
 import { verifyQstashSignature } from "@/lib/cron/verify-qstash";
-import { conn } from "@/lib/planetscale";
+import { conn } from "@/lib/postgres";
 import { storage } from "@/lib/storage";
 import { recordLink } from "@/lib/tinybird";
 import { redis } from "@/lib/upstash";
@@ -403,7 +403,9 @@ export async function POST(req: Request) {
 
     try {
       // Finally, delete the partner account
-      await conn.execute(`DELETE FROM Partner WHERE id = ?`, [sourcePartnerId]);
+      await conn.execute(`DELETE FROM "Partner" WHERE id = ?`, [
+        sourcePartnerId,
+      ]);
       console.log(
         `Deleted partner ${sourceAccount.email} (${sourceAccount.id})`,
       );

@@ -6,7 +6,10 @@ import {
   commissionAnalyticsQuerySchema,
   commissionAnalyticsSchema,
 } from "@/lib/commissions/schema";
-import { sqlGranularityMap } from "@/lib/planetscale/granularity";
+import {
+  pgDateBucket,
+  sqlGranularityMap,
+} from "@/lib/postgres/granularity";
 import type { CommissionAnalyticsQuery } from "@/lib/types";
 import { prisma } from "@dub/prisma";
 import { CommissionStatus, CommissionType, Prisma } from "@dub/prisma/client";
@@ -51,9 +54,9 @@ function commissionSqlConditions({
   groupIdParam: string | undefined;
 }): Prisma.Sql[] {
   const conditions: Prisma.Sql[] = [
-    Prisma.sql`c.programId = ${programId}`,
-    Prisma.sql`c.createdAt >= ${startDate}`,
-    Prisma.sql`c.createdAt < ${endDate}`,
+    Prisma.sql`c."programId" = ${programId}`,
+    Prisma.sql`c."createdAt" >= ${startDate}`,
+    Prisma.sql`c."createdAt" < ${endDate}`,
     status
       ? Prisma.sql`c.status = ${status}`
       : Prisma.sql`c.status NOT IN (${Prisma.join([...excludedStatuses])})`,
@@ -63,8 +66,8 @@ function commissionSqlConditions({
     const list = Prisma.join(partnerFilter.values.map((v) => Prisma.sql`${v}`));
     conditions.push(
       partnerFilter.sqlOperator === "NOT IN"
-        ? Prisma.sql`c.partnerId NOT IN (${list})`
-        : Prisma.sql`c.partnerId IN (${list})`,
+        ? Prisma.sql`c."partnerId" NOT IN (${list})`
+        : Prisma.sql`c."partnerId" IN (${list})`,
     );
   }
 
@@ -86,10 +89,10 @@ function commissionSqlConditions({
           ? Prisma.sql`NOT IN`
           : Prisma.sql`IN`;
       conditions.push(Prisma.sql`EXISTS (
-        SELECT 1 FROM ProgramEnrollment pe
-        WHERE pe.programId = c.programId
-          AND pe.partnerId = c.partnerId
-          AND pe.groupId ${op} (${list})
+        SELECT 1 FROM "ProgramEnrollment" pe
+        WHERE pe."programId" = c."programId"
+          AND pe."partnerId" = c."partnerId"
+          AND pe."groupId" ${op} (${list})
       )`);
     }
   }
@@ -264,15 +267,15 @@ async function byGroupId({
   const rows = await prisma.$queryRaw<CommissionGroupIdQueryRow[]>(
     Prisma.sql`
       SELECT
-        pe.groupId AS groupId,
+        pe."groupId" AS "groupId",
         SUM(c.earnings) AS earnings,
         COUNT(c.id) AS count
-      FROM Commission c
-      JOIN ProgramEnrollment pe
-        ON pe.programId = c.programId
-       AND pe.partnerId = c.partnerId
+      FROM "Commission" c
+      JOIN "ProgramEnrollment" pe
+        ON pe."programId" = c."programId"
+       AND pe."partnerId" = c."partnerId"
       WHERE ${whereClause}
-      GROUP BY pe.groupId
+      GROUP BY pe."groupId"
       ORDER BY earnings DESC`,
   );
 
@@ -456,10 +459,10 @@ async function byTimeseries({
   const rows = await prisma.$queryRaw<CommissionTimeseriesRow[]>(
     Prisma.sql`
       SELECT
-        DATE_FORMAT(CONVERT_TZ(c.createdAt, "UTC", ${timezone || "UTC"}), ${dateFormat}) AS start,
+        ${pgDateBucket({ column: Prisma.sql`c."createdAt"`, timezone: timezone || "UTC", dateFormat })} AS start,
         SUM(c.earnings) AS earnings,
         COUNT(c.id) AS count
-      FROM Commission c
+      FROM "Commission" c
       WHERE ${whereClause}
       GROUP BY start
       ORDER BY start ASC`,

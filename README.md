@@ -42,7 +42,7 @@ Our platform powers 100M+ clicks and 2M+ links monthly, and is used by world-cla
 - [Prisma](https://www.prisma.io/) – ORM
 - [Upstash](https://upstash.com/) – redis
 - [Tinybird](https://tinybird.com/) – analytics
-- [PlanetScale](https://planetscale.com/) – database
+- [PostgreSQL](https://www.postgresql.org/) – database
 - [NextAuth.js](https://next-auth.js.org/) – auth
 - [BoxyHQ](https://boxyhq.com/enterprise-sso) – SSO/SAML
 - [Turborepo](https://turbo.build/repo) – monorepo

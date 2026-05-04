@@ -14,33 +14,33 @@ export const getBountyWithDetails = async ({
       b.name,
       b.description,
       b.type,
-      b.startsAt,
-      b.endsAt,
-      b.submissionsOpenAt,
-      b.submissionFrequency,
-      b.maxSubmissions,
-      b.rewardAmount,
-      b.rewardDescription,
-      b.submissionRequirements,
-      b.socialMetricsLastSyncedAt,
-      b.performanceScope,
-      wf.triggerConditions,
+      b."startsAt",
+      b."endsAt",
+      b."submissionsOpenAt",
+      b."submissionFrequency",
+      b."maxSubmissions",
+      b."rewardAmount",
+      b."rewardDescription",
+      b."submissionRequirements",
+      b."socialMetricsLastSyncedAt",
+      b."performanceScope",
+      wf."triggerConditions",
 
       --  Bounty groups
       COALESCE(
         (
-          SELECT JSON_ARRAYAGG(
-            JSON_OBJECT('id', groupId)
+          SELECT jsonb_agg(
+            jsonb_build_object('id', "groupId")
           )
-          FROM BountyGroup
-          WHERE bountyId = b.id
+          FROM "BountyGroup"
+          WHERE "bountyId" = b.id
         ),
-        JSON_ARRAY()
-      ) AS \`groups\`
+        '[]'::jsonb
+      ) AS "groups"
 
-    FROM Bounty b
-    LEFT JOIN Workflow wf ON wf.id = b.workflowId
-    WHERE b.id = ${bountyId} AND b.programId = ${programId}
+    FROM "Bounty" b
+    LEFT JOIN "Workflow" wf ON wf.id = b."workflowId"
+    WHERE b.id = ${bountyId} AND b."programId" = ${programId}
     LIMIT 1
   `) satisfies Array<any>;
 
