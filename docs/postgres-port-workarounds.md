@@ -71,7 +71,9 @@ not be carried over exactly as-is, and the compatible alternative used instead.
   behavior remain authoritative for the app.
 - The vendored `@prisma-next/*` tarballs were packed from
   `~/work/prisma/prisma-next-clean` on branch `feat/idless-models` at commit
-  `76aacd8cb7ed083874026b93cdb94a03d00eb9c5`.
+  `8ff21273c6016d7fab875da72561da1089f537ee`. That branch includes the
+  `@updatedAt` runtime fix from
+  `146242c1ade74ec28d51a8c9c1b49a0ed8e895a0`.
 - `packages/prisma/schema/contract.prisma` is the Prisma Next PSL contract.
   `contract.json` and `contract.d.ts` are emitted and committed next to it.
 - Prisma Next cannot express Prisma `relationMode = "prisma"` yet, so

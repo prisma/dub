@@ -55,6 +55,17 @@ Current modules:
   and partner includes.
 - `customer-runtime-module`: customer cursor and list reads.
 
+Latest run, using Prisma Next tarballs packed from `feat/idless-models` at
+`8ff21273c6016d7fab875da72561da1089f537ee` on 2026-05-05:
+
+- 27 modules, 72 operations: 49 reads and 23 writes.
+- Prisma 6 emitted 117 captured queries; Prisma Next emitted 103.
+- Same query count: 50/72 operations.
+- Result type shape equal: 70/72 operations.
+- Result value summary equal: 35/72 operations.
+- Before fixture equal: 72/72 operations.
+- After fixture equal: 53/72 operations overall, and 4/23 write operations.
+
 Known visible result-type differences:
 
 - `analytics.read.all-time-composite-for-link`: Prisma 6 returns
@@ -66,28 +77,41 @@ Known visible result-type differences:
 
 Tracked write-query differences:
 
+- `@updatedAt` now appears in Prisma Next create and non-empty update SQL for
+  the covered high-level ORM writes. Prisma 6 still sends generated timestamp
+  values as timestamp strings, while Prisma Next sends JavaScript `Date`
+  parameters to the driver.
 - Counter increments are not equivalent through the current Prisma Next
-  high-level ORM. Prisma 6 emits atomic `SET field = field + $n` updates and
-  writes `updatedAt`; the Prisma Next high-level fallback currently reads the
-  current value first, writes the computed scalar value, and leaves `updatedAt`
-  unchanged.
+  high-level ORM. Prisma 6 emits atomic `SET field = field + $n` updates. The
+  Prisma Next high-level fallback currently reads the current value first, then
+  writes the computed scalar value plus `updatedAt`.
 - Multi-row count writes have different orchestration. For example,
   `commissions.update.mark-paid-count` captures Prisma 6 as
   `BEGIN` + matching-row `SELECT` + `UPDATE ... updatedAt = $n` + `COMMIT`,
   while Prisma Next `updateCount` captures a matching-row `SELECT` followed by
-  `UPDATE` without an automatic `updatedAt` assignment.
+  `UPDATE ... updatedAt = $n` without an explicit transaction.
 - Scalar update writes such as `payouts.update.pending-amount` keep matching
-  result shapes, but Prisma 6 advances `updatedAt` and Prisma Next currently
-  leaves it unchanged unless the application passes an explicit value.
+  result shapes. Their `updatedAt` values now differ only by execution-time
+  milliseconds in ORM results, but raw fixture snapshots still expose the
+  timestamp encoding difference described below.
 - `notification-email.aggregate.campaign-summary` maps one Prisma 6 raw SQL
   query with `SUM(CASE WHEN ...)` into four Prisma Next high-level count
   aggregates because that CASE aggregate shape is not represented by the
   current high-level ORM API.
-- `notification-email.update.delivered-at` exposes a parameter-encoding
-  difference: Prisma 6 sends the `Date` update value as a timestamp string,
-  while Prisma Next sends a JavaScript `Date` to the driver. The returned JS
-  value shape matches, but the raw fixture snapshot captures the resulting
+- Explicit date writes such as `notification-email.update.delivered-at`,
+  `postback.update.disable`, `usage.update.link-click-increment`,
+  `program-application.update.reject`, and
+  `bounty-submission.update.approve` expose a parameter-encoding difference:
+  Prisma 6 sends the `Date` update value as a timestamp string, while Prisma
+  Next sends a JavaScript `Date` to the driver. The returned JS value shape
+  usually matches, but raw fixture snapshots capture the resulting
   `timestamp(3)` state difference.
+- Date values still need follow-up. In the Europe/Rome run from
+  2026-05-05, many existing `timestamp(3)` reads differed by one hour in ORM
+  results, and raw fixture snapshots for generated May 2026 timestamps differed
+  by two hours because the process was in CEST. See
+  `docs/prisma-next-date-value-expectations.md` for the expected Prisma 6
+  compatibility behavior.
 - `postback.read.enabled-for-trigger` keeps the Prisma 6 JSON
   `array_contains` predicate as the baseline. The current Prisma Next
   high-level ORM path fetches enabled partner postbacks and applies the JSON
