@@ -20,6 +20,11 @@ Current modules:
 - `token-runtime-module`: restricted token listing with user includes.
 - `webhook-runtime-module`: workspace webhook reads with `LinkWebhook` includes.
 - `domain-runtime-module`: workspace domain scalar reads.
+- `program-runtime-module`: basic program fetcher reads.
+- `partner-runtime-module`: partner profile reads.
+- `program-enrollment-runtime-module`: program enrollment compound-key reads
+  and partner includes.
+- `customer-runtime-module`: customer cursor and list reads.
 
 ## Runtime Capture
 
@@ -40,6 +45,7 @@ result values observed by the application boundary under test.
   emitted by the high-level `db.orm` API.
 - Results are summarized by JavaScript value shape, including constructors such
   as `Date`, so type differences are visible separately from dynamic values.
+  Known mismatches stay visible in the report instead of being normalized away.
 - Every operation records before/after database snapshots for both runtimes.
   The before snapshot proves the fixture is identical before running a read or
   write; the after snapshot shows how each runtime changed its own database.

@@ -30,6 +30,10 @@ const fixtureValues = {
   installedIntegrationId: "installed_integration_runtime_sql",
   linkId: "link_runtime_sql",
   folderId: "fold_runtime_sql",
+  customerId: "customer_runtime_sql",
+  partnerId: "partner_runtime_sql",
+  programEnrollmentId: "program_enrollment_runtime_sql",
+  partnerGroupId: "partner_group_runtime_sql",
   programWorkspaceId: "proj_runtime_sql_program",
   programWorkspaceSlug: "runtime-sql-program-workspace",
   programId: "prog_runtime_sql",
@@ -485,6 +489,98 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create table "Program" (
+      "id" text primary key,
+      "workspaceId" text not null,
+      "defaultFolderId" text not null,
+      "defaultGroupId" text not null,
+      "name" text not null,
+      "slug" text unique not null,
+      "domain" text unique,
+      "url" text,
+      "logo" text,
+      "description" text,
+      "primaryRewardEvent" text not null default 'sale',
+      "minPayoutAmount" integer not null default 0,
+      "payoutMode" text not null default 'internal',
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "addedToMarketplaceAt" timestamp(3)
+    )
+  `);
+  await pool.query(`
+    create table "Partner" (
+      "id" text primary key,
+      "name" text not null,
+      "username" text unique,
+      "companyName" text,
+      "profileType" text not null default 'individual',
+      "email" text unique,
+      "image" text,
+      "description" text,
+      "country" text,
+      "payoutsEnabledAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create type "ProgramEnrollmentStatus" as enum (
+      'pending',
+      'approved',
+      'rejected',
+      'invited',
+      'declined',
+      'deactivated',
+      'banned',
+      'archived'
+    )
+  `);
+  await pool.query(`
+    create table "ProgramEnrollment" (
+      "id" text primary key,
+      "partnerId" text not null,
+      "programId" text not null,
+      "tenantId" text,
+      "groupId" text,
+      "status" "ProgramEnrollmentStatus" not null default 'pending',
+      "totalClicks" integer not null default 0,
+      "totalLeads" integer not null default 0,
+      "totalConversions" integer not null default 0,
+      "totalSales" integer not null default 0,
+      "totalSaleAmount" bigint not null default 0,
+      "totalCommissions" bigint not null default 0,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("partnerId", "programId"),
+      unique ("tenantId", "programId")
+    )
+  `);
+  await pool.query(`
+    create table "Customer" (
+      "id" text primary key,
+      "name" text,
+      "email" text,
+      "avatar" text,
+      "externalId" text,
+      "stripeCustomerId" text unique,
+      "linkId" text,
+      "clickId" text,
+      "clickedAt" timestamp(3),
+      "country" text,
+      "sales" integer not null default 0,
+      "saleAmount" bigint not null default 0,
+      "projectId" text not null,
+      "projectConnectId" text,
+      "programId" text,
+      "partnerId" text,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("projectId", "externalId"),
+      unique ("projectConnectId", "externalId")
+    )
+  `);
+  await pool.query(`
     create table "Dashboard" (
       "id" text primary key,
       "linkId" text unique,
@@ -503,7 +599,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "RestrictedToken", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "ProgramEnrollment", "Partner", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "RestrictedToken", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -553,6 +649,63 @@ async function resetRuntimeFixture(pool, options = {}) {
     ],
   );
   await pool.query(
+    'insert into "Program" ("id", "workspaceId", "defaultFolderId", "defaultGroupId", "name", "slug", "domain", "url", "logo", "description", "primaryRewardEvent", "minPayoutAmount", "payoutMode", "createdAt", "updatedAt", "addedToMarketplaceAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)',
+    [
+      fixtureValues.programId,
+      fixtureValues.programWorkspaceId,
+      fixtureValues.folderId,
+      fixtureValues.partnerGroupId,
+      "Runtime SQL Program",
+      "runtime-sql-program",
+      null,
+      "https://example.com/program",
+      null,
+      "Runtime SQL program",
+      "sale",
+      1000,
+      "internal",
+      new Date("2024-01-04T02:00:00.000Z"),
+      new Date("2024-01-04T02:00:00.000Z"),
+      new Date("2024-01-04T03:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Partner" ("id", "name", "username", "companyName", "profileType", "email", "image", "description", "country", "payoutsEnabledAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+    [
+      fixtureValues.partnerId,
+      "Runtime SQL Partner",
+      "runtime-sql-partner",
+      null,
+      "individual",
+      "partner@example.com",
+      "https://example.com/partner.png",
+      "Partner used by runtime SQL comparisons",
+      "US",
+      new Date("2024-01-04T04:00:00.000Z"),
+      new Date("2024-01-04T04:00:00.000Z"),
+      new Date("2024-01-04T04:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "ProgramEnrollment" ("id", "partnerId", "programId", "tenantId", "groupId", "status", "totalClicks", "totalLeads", "totalConversions", "totalSales", "totalSaleAmount", "totalCommissions", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
+    [
+      fixtureValues.programEnrollmentId,
+      fixtureValues.partnerId,
+      fixtureValues.programId,
+      "tenant_runtime_sql",
+      fixtureValues.partnerGroupId,
+      "approved",
+      11,
+      3,
+      2,
+      1,
+      "5000",
+      "1200",
+      new Date("2024-01-04T05:00:00.000Z"),
+      new Date("2024-01-04T05:00:00.000Z"),
+    ],
+  );
+  await pool.query(
     'insert into "ProjectUsers" ("id", "role", "userId", "projectId", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6)',
     [
       "project_user_runtime_sql",
@@ -599,9 +752,27 @@ async function resetRuntimeFixture(pool, options = {}) {
       fixtureValues.projectId,
       fixtureValues.userId,
       fixtureValues.programId,
-      "partner_runtime_sql",
+      fixtureValues.partnerId,
       false,
       5,
+    ],
+  );
+  await pool.query(
+    'insert into "Customer" ("id", "name", "email", "externalId", "linkId", "country", "sales", "saleAmount", "projectId", "programId", "partnerId", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+    [
+      fixtureValues.customerId,
+      "Runtime SQL Customer",
+      "customer@example.com",
+      "external_runtime_sql",
+      fixtureValues.linkId,
+      "US",
+      1,
+      "5000",
+      fixtureValues.projectId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      new Date("2024-01-11T00:00:00.000Z"),
+      new Date("2024-01-11T00:00:00.000Z"),
     ],
   );
   await pool.query(
@@ -748,6 +919,10 @@ async function snapshotRuntimeFixture(pool) {
     linkWebhooks,
     domains,
     registeredDomains,
+    programs,
+    partners,
+    programEnrollments,
+    customers,
     folders,
     folderUsers,
     links,
@@ -764,6 +939,10 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "LinkWebhook" order by "id"'),
     pool.query('select * from "Domain" order by "id"'),
     pool.query('select * from "RegisteredDomain" order by "id"'),
+    pool.query('select * from "Program" order by "id"'),
+    pool.query('select * from "Partner" order by "id"'),
+    pool.query('select * from "ProgramEnrollment" order by "id"'),
+    pool.query('select * from "Customer" order by "id"'),
     pool.query('select * from "Folder" order by "id"'),
     pool.query('select * from "FolderUser" order by "id"'),
     pool.query('select * from "Link" order by "id"'),
@@ -782,6 +961,10 @@ async function snapshotRuntimeFixture(pool) {
     LinkWebhook: linkWebhooks.rows,
     Domain: domains.rows,
     RegisteredDomain: registeredDomains.rows,
+    Program: programs.rows,
+    Partner: partners.rows,
+    ProgramEnrollment: programEnrollments.rows,
+    Customer: customers.rows,
     Folder: folders.rows,
     FolderUser: folderUsers.rows,
     Link: links.rows,
@@ -1631,6 +1814,270 @@ const domainModule = {
   ],
 };
 
+const programModule = {
+  id: "program-runtime-module",
+  description: "Module-sized comparison for basic program fetcher reads.",
+  operations: [
+    {
+      id: "program.read.by-slug",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.program.findUnique({
+          where: {
+            slug: "runtime-sql-program",
+          },
+          select: {
+            id: true,
+            workspaceId: true,
+            defaultFolderId: true,
+            defaultGroupId: true,
+            name: true,
+            slug: true,
+            minPayoutAmount: true,
+            payoutMode: true,
+            createdAt: true,
+            addedToMarketplaceAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Program.where({ slug: "runtime-sql-program" })
+          .select(
+            "id",
+            "workspaceId",
+            "defaultFolderId",
+            "defaultGroupId",
+            "name",
+            "slug",
+            "minPayoutAmount",
+            "payoutMode",
+            "createdAt",
+            "addedToMarketplaceAt",
+          )
+          .first(),
+    },
+    {
+      id: "program.read.marketplace-by-slug",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.program.findUnique({
+          where: {
+            slug: "runtime-sql-program",
+            addedToMarketplaceAt: {
+              not: null,
+            },
+          },
+          select: {
+            id: true,
+            slug: true,
+            addedToMarketplaceAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Program.where({ slug: "runtime-sql-program" })
+          .where((program) => program.addedToMarketplaceAt.isNotNull())
+          .select("id", "slug", "addedToMarketplaceAt")
+          .first(),
+    },
+  ],
+};
+
+const partnerModule = {
+  id: "partner-runtime-module",
+  description: "Module-sized comparison for partner profile reads.",
+  operations: [
+    {
+      id: "partner.read.by-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.partner.findUnique({
+          where: {
+            id: fixtureValues.partnerId,
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            country: true,
+            payoutsEnabledAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Partner.where({ id: fixtureValues.partnerId })
+          .select("id", "name", "email", "image", "country", "payoutsEnabledAt")
+          .first(),
+    },
+  ],
+};
+
+const programEnrollmentModule = {
+  id: "program-enrollment-runtime-module",
+  description:
+    "Module-sized comparison for program enrollment compound-key reads.",
+  operations: [
+    {
+      id: "program-enrollment.read.by-partner-program",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.programEnrollment.findUnique({
+          where: {
+            partnerId_programId: {
+              partnerId: fixtureValues.partnerId,
+              programId: fixtureValues.programId,
+            },
+          },
+          select: {
+            id: true,
+            partnerId: true,
+            programId: true,
+            tenantId: true,
+            groupId: true,
+            status: true,
+            totalClicks: true,
+            totalCommissions: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.ProgramEnrollment.where({
+          partnerId: fixtureValues.partnerId,
+          programId: fixtureValues.programId,
+        })
+          .select(
+            "id",
+            "partnerId",
+            "programId",
+            "tenantId",
+            "groupId",
+            "status",
+            "totalClicks",
+            "totalCommissions",
+          )
+          .first(),
+    },
+    {
+      id: "program-enrollment.read.approved-with-partner",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.programEnrollment.findMany({
+          where: {
+            programId: fixtureValues.programId,
+            status: "approved",
+          },
+          select: {
+            id: true,
+            partnerId: true,
+            programId: true,
+            status: true,
+            partner: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.ProgramEnrollment.where({
+          programId: fixtureValues.programId,
+          status: "approved",
+        })
+          .select("id", "partnerId", "programId", "status")
+          .include("partner", (partner) =>
+            partner.select("id", "name", "email", "image"),
+          )
+          .all(),
+    },
+  ],
+};
+
+const customerModule = {
+  id: "customer-runtime-module",
+  description: "Module-sized comparison for customer cursor and list reads.",
+  operations: [
+    {
+      id: "customer.read.cursor-validation",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.customer.findUnique({
+          where: {
+            id: fixtureValues.customerId,
+          },
+          select: {
+            id: true,
+            projectId: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Customer.where({ id: fixtureValues.customerId })
+          .select("id", "projectId")
+          .first(),
+    },
+    {
+      id: "customer.read.list-for-workspace-program-partner",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.customer.findMany({
+          where: {
+            projectId: fixtureValues.projectId,
+            programId: fixtureValues.programId,
+            partnerId: fixtureValues.partnerId,
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            externalId: true,
+            country: true,
+            projectId: true,
+            programId: true,
+            partnerId: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 100,
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Customer.where({
+          projectId: fixtureValues.projectId,
+          programId: fixtureValues.programId,
+          partnerId: fixtureValues.partnerId,
+        })
+          .select(
+            "id",
+            "name",
+            "email",
+            "externalId",
+            "country",
+            "projectId",
+            "programId",
+            "partnerId",
+            "createdAt",
+          )
+          .orderBy((customer) => customer.createdAt.desc())
+          .take(100)
+          .all(),
+    },
+  ],
+};
+
 const runtimeModules = [
   dashboardModule,
   userModule,
@@ -1643,6 +2090,10 @@ const runtimeModules = [
   tokenModule,
   webhookModule,
   domainModule,
+  programModule,
+  partnerModule,
+  programEnrollmentModule,
+  customerModule,
 ];
 
 async function capture(label, collector, runOperation) {
