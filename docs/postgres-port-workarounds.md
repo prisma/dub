@@ -70,9 +70,8 @@ not be carried over exactly as-is, and the compatible alternative used instead.
   Production `@dub/prisma`, `@dub/prisma/client`, and Prisma 6.19.x Client
   behavior remain authoritative for the app.
 - The vendored `@prisma-next/*` tarballs were packed from
-  `~/work/prisma/prisma-next` at commit
-  `a07eb10d2d947b74ea2f1719946be3bcd4fba007`, including local worktree
-  changes that add `@updatedAt` and id-less model support.
+  `~/work/prisma/prisma-next-clean` on branch `feat/idless-models` at commit
+  `76aacd8cb7ed083874026b93cdb94a03d00eb9c5`.
 - `packages/prisma/schema/contract.prisma` is the Prisma Next PSL contract.
   `contract.json` and `contract.d.ts` are emitted and committed next to it.
 - Prisma Next cannot express Prisma `relationMode = "prisma"` yet, so

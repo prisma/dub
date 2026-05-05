@@ -54,7 +54,6 @@
       "@prisma-next/postgres": "file:packages/prisma/vendor/prisma-next/prisma-next-postgres-0.0.1.tgz",
       "@prisma-next/psl-parser": "file:packages/prisma/vendor/prisma-next/prisma-next-psl-parser-0.0.1.tgz",
       "@prisma-next/psl-printer": "file:packages/prisma/vendor/prisma-next/prisma-next-psl-printer-0.0.1.tgz",
-      "@prisma-next/runtime-executor": "file:packages/prisma/vendor/prisma-next/prisma-next-runtime-executor-0.0.1.tgz",
       "@prisma-next/sql-builder": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-builder-0.0.1.tgz",
       "@prisma-next/sql-contract": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-0.0.1.tgz",
       "@prisma-next/sql-contract-emitter": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-emitter-0.0.1.tgz",

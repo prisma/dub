@@ -135,8 +135,20 @@ async function applyPrismaNextPlannedSql(databaseUrl: string) {
     throw new Error(`Prisma Next db init planning failed: ${result.failure.summary}`);
   }
 
-  const statements = result.value.plan.sql ?? [];
-  if (statements.length === 0 && result.value.plan.operations.length > 0) {
+  const plan = result.value.plan as {
+    readonly operations: readonly unknown[];
+    readonly sql?: readonly string[];
+    readonly preview?: {
+      readonly statements?: readonly { readonly language: string; readonly text: string }[];
+    };
+  };
+  const statements =
+    plan.sql ??
+    plan.preview?.statements
+      ?.filter((statement) => statement.language === "sql")
+      .map((statement) => statement.text) ??
+    [];
+  if (statements.length === 0 && plan.operations.length > 0) {
     throw new Error("Prisma Next db init plan did not expose SQL statements.");
   }
 
