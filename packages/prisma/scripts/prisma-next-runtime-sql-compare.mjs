@@ -47,6 +47,7 @@ const fixtureValues = {
   postbackDisabledId: "postback_disabled_runtime_sql",
   payoutId: "payout_runtime_sql",
   payoutPendingId: "payout_pending_runtime_sql",
+  programCategoryId: "prog_cat_runtime_sql_001",
   programApplicationId: "program_application_runtime_sql",
   programApplicationEventId: "program_application_event_runtime_sql",
   programApplicationEventSecondId:
@@ -651,6 +652,29 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create type "Category" as enum (
+      'Artificial_Intelligence',
+      'Development',
+      'Design',
+      'Productivity',
+      'Finance',
+      'Marketing',
+      'Ecommerce',
+      'Security',
+      'Education',
+      'Health',
+      'Consumer'
+    )
+  `);
+  await pool.query(`
+    create table "ProgramCategory" (
+      "id" char(24) primary key,
+      "programId" text not null,
+      "category" "Category" not null,
+      unique ("programId", "category")
+    )
+  `);
+  await pool.query(`
     create table "PartnerGroup" (
       "id" text primary key,
       "programId" text not null,
@@ -1118,7 +1142,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "BountySubmission", "BountyGroup", "Bounty", "Workflow", "ProgramApplicationEvent", "ProgramApplication", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "BountySubmission", "BountyGroup", "Bounty", "Workflow", "ProgramApplicationEvent", "ProgramApplication", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "ProgramCategory", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -1191,13 +1215,21 @@ async function resetRuntimeFixture(pool, options = {}) {
     ],
   );
   await pool.query(
-    'insert into "PartnerGroup" ("id", "programId", "name", "slug", "color", "applicationFormPublishedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    'insert into "ProgramCategory" ("id", "programId", "category") values ($1, $2, $3)',
+    [fixtureValues.programCategoryId, fixtureValues.programId, "Development"],
+  );
+  await pool.query(
+    'insert into "PartnerGroup" ("id", "programId", "name", "slug", "color", "clickRewardId", "leadRewardId", "saleRewardId", "discountId", "applicationFormPublishedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
     [
       fixtureValues.partnerGroupId,
       fixtureValues.programId,
       "Default",
       "default",
       "blue",
+      "reward_click_runtime_sql",
+      "reward_lead_runtime_sql",
+      null,
+      "discount_runtime_sql",
       new Date("2024-01-04T03:30:00.000Z"),
       new Date("2024-01-04T03:30:00.000Z"),
       new Date("2024-01-04T03:30:00.000Z"),
@@ -1776,6 +1808,7 @@ async function snapshotRuntimeFixture(pool) {
     domains,
     registeredDomains,
     programs,
+    programCategories,
     partnerGroups,
     partners,
     programEnrollments,
@@ -1808,6 +1841,7 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Domain" order by "id"'),
     pool.query('select * from "RegisteredDomain" order by "id"'),
     pool.query('select * from "Program" order by "id"'),
+    pool.query('select * from "ProgramCategory" order by "id"'),
     pool.query('select * from "PartnerGroup" order by "id"'),
     pool.query('select * from "Partner" order by "id"'),
     pool.query('select * from "ProgramEnrollment" order by "id"'),
@@ -1842,6 +1876,7 @@ async function snapshotRuntimeFixture(pool) {
     Domain: domains.rows,
     RegisteredDomain: registeredDomains.rows,
     Program: programs.rows,
+    ProgramCategory: programCategories.rows,
     PartnerGroup: partnerGroups.rows,
     Partner: partners.rows,
     ProgramEnrollment: programEnrollments.rows,
@@ -3933,6 +3968,104 @@ const programNetworkModule = {
         ).aggregate((aggregate) => ({
           count: aggregate.count(),
         })),
+    },
+    {
+      id: "program-network.aggregate.marketplace-categories",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const rows = await prisma.$queryRaw`
+          SELECT pc.category, COUNT(p.id) AS _count
+          FROM "ProgramCategory" pc
+          JOIN "Program" p ON p.id = pc."programId"
+          WHERE p."addedToMarketplaceAt" IS NOT NULL
+          GROUP BY pc.category
+          ORDER BY _count DESC
+        `;
+        return rows.map((row) => ({
+          category: row.category,
+          count: Number(row._count),
+        }));
+      },
+      prismaNext: async ({ db }) => {
+        const rows = await db.orm.ProgramCategory.where((programCategory) =>
+          programCategory.program.some((program) =>
+            program.addedToMarketplaceAt.isNotNull(),
+          ),
+        )
+          .groupBy("category")
+          .aggregate((aggregate) => ({
+            count: aggregate.count(),
+          }));
+        return rows
+          .map((row) => ({
+            category: row.category,
+            count: row.count,
+          }))
+          .sort((left, right) => right.count - left.count);
+      },
+    },
+    {
+      id: "program-network.aggregate.marketplace-reward-types",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const [row] = await prisma.$queryRaw`
+          SELECT
+            COUNT(pg."clickRewardId") AS "click",
+            COUNT(pg."leadRewardId") AS "lead",
+            COUNT(pg."saleRewardId") AS "sale",
+            COUNT(pg."discountId") AS "discount"
+          FROM "PartnerGroup" pg
+          JOIN "Program" p ON p.id = pg."programId"
+          WHERE pg.slug = 'default'
+            AND p."addedToMarketplaceAt" IS NOT NULL
+        `;
+        return {
+          click: Number(row.click),
+          lead: Number(row.lead),
+          sale: Number(row.sale),
+          discount: Number(row.discount),
+        };
+      },
+      prismaNext: async ({ db }) => {
+        const marketplaceDefaultGroup = (group) =>
+          and(
+            group.slug.eq("default"),
+            group.program.some((program) =>
+              program.addedToMarketplaceAt.isNotNull(),
+            ),
+          );
+        const click = await db.orm.PartnerGroup.where((group) =>
+          and(marketplaceDefaultGroup(group), group.clickRewardId.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const lead = await db.orm.PartnerGroup.where((group) =>
+          and(marketplaceDefaultGroup(group), group.leadRewardId.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const sale = await db.orm.PartnerGroup.where((group) =>
+          and(marketplaceDefaultGroup(group), group.saleRewardId.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const discount = await db.orm.PartnerGroup.where((group) =>
+          and(marketplaceDefaultGroup(group), group.discountId.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+
+        return {
+          click: click.count,
+          lead: lead.count,
+          sale: sale.count,
+          discount: discount.count,
+        };
+      },
     },
   ],
 };

@@ -42,7 +42,8 @@ Current modules:
 - `domain-runtime-module`: workspace domain scalar reads.
 - `program-runtime-module`: basic program fetcher reads.
 - `program-network-runtime-module`: marketplace program availability counting
-  through `Program`/`PartnerGroup` relation filters.
+  and aggregations through `Program`, `ProgramCategory`, and `PartnerGroup`
+  relation filters.
 - `program-application-runtime-module`: program application reads/review
   writes plus application event funnel counts and relation includes.
 - `bounty-runtime-module`: bounty details, grouped submission counts, and
@@ -92,6 +93,9 @@ Tracked write-query differences:
 - `program-application-event.aggregate.funnel-summary` maps one Prisma 6 raw
   SQL query with multiple `COUNT(column)` metrics into five Prisma Next
   high-level count aggregates, one for each funnel step.
+- `program-network.aggregate.marketplace-reward-types` maps one Prisma 6 raw
+  SQL query with four `COUNT(column)` metrics into four Prisma Next high-level
+  filtered count aggregates.
 - `bounty.read.details-with-groups` maps a Prisma 6 raw SQL query with a
   lateral-style JSON aggregate into Prisma Next high-level relation includes
   over `Workflow` and `BountyGroup`.
