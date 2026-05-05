@@ -47,7 +47,6 @@ const fixtureValues = {
   postbackDisabledId: "postback_disabled_runtime_sql",
   payoutId: "payout_runtime_sql",
   payoutPendingId: "payout_pending_runtime_sql",
-  programCategoryId: "prog_cat_runtime_sql_001",
   programApplicationId: "program_application_runtime_sql",
   programApplicationEventId: "program_application_event_runtime_sql",
   programApplicationEventSecondId:
@@ -668,7 +667,6 @@ async function createRuntimeComparisonSchema(pool) {
   `);
   await pool.query(`
     create table "ProgramCategory" (
-      "id" char(24) primary key,
       "programId" text not null,
       "category" "Category" not null,
       unique ("programId", "category")
@@ -1222,8 +1220,8 @@ async function resetRuntimeFixture(pool, options = {}) {
     ],
   );
   await pool.query(
-    'insert into "ProgramCategory" ("id", "programId", "category") values ($1, $2, $3)',
-    [fixtureValues.programCategoryId, fixtureValues.programId, "Development"],
+    'insert into "ProgramCategory" ("programId", "category") values ($1, $2)',
+    [fixtureValues.programId, "Development"],
   );
   await pool.query(
     'insert into "PartnerGroup" ("id", "programId", "name", "slug", "color", "clickRewardId", "leadRewardId", "saleRewardId", "discountId", "applicationFormPublishedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
@@ -1848,7 +1846,7 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Domain" order by "id"'),
     pool.query('select * from "RegisteredDomain" order by "id"'),
     pool.query('select * from "Program" order by "id"'),
-    pool.query('select * from "ProgramCategory" order by "id"'),
+    pool.query('select * from "ProgramCategory" order by "programId", "category"'),
     pool.query('select * from "PartnerGroup" order by "id"'),
     pool.query('select * from "Partner" order by "id"'),
     pool.query('select * from "ProgramEnrollment" order by "id"'),

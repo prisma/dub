@@ -1,7 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { closeSync, openSync, readFileSync, unlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 import { Pool } from "pg";
 
 const baseDatabaseUrl =
@@ -12,18 +10,6 @@ type Snapshot = {
   readonly indexes: Map<string, string>;
   readonly foreignKeys: Set<string>;
 };
-
-const syntheticIdTables = new Set([
-  "EmailVerificationToken",
-  "PartnerIndustryInterest",
-  "PartnerInvite",
-  "PartnerPreferredEarningStructure",
-  "PartnerSalesChannel",
-  "PasswordResetToken",
-  "ProgramCategory",
-  "ProjectInvite",
-  "VerificationToken",
-]);
 
 const quoteIdent = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
@@ -116,75 +102,51 @@ const run = (
   }
 };
 
-async function applyPrismaNextDryRunPlan(databaseUrl: string) {
-  const stdoutPath = join(tmpdir(), `dub-prisma-next-plan-${process.pid}-${Date.now()}.json`);
-  const stdoutFd = openSync(stdoutPath, "w");
-  const prismaNextBin = join(
-    process.cwd(),
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "prisma-next.cmd" : "prisma-next",
-  );
-  const result = spawnSync(
-    prismaNextBin,
-    [
-      "db",
-      "init",
-      "--config",
-      "./prisma-next.config.ts",
-      "--db",
-      databaseUrl,
-      "--dry-run",
-      "--json",
-    ],
-    {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
-      },
-      stdio: ["ignore", stdoutFd, "pipe"],
-      encoding: "utf8",
-    },
-  );
-  closeSync(stdoutFd);
-  const stdout = readFileSync(stdoutPath, "utf8");
-  unlinkSync(stdoutPath);
+async function applyPrismaNextPlannedSql(databaseUrl: string) {
+  const { loadConfig } = await import("@prisma-next/cli/config-loader");
+  const { createControlClient, enrichContract } = await import("@prisma-next/cli/control-api");
+  const config = await loadConfig("./prisma-next.config.ts");
+  const contractJson = JSON.parse(await readFile("./schema/contract.json", "utf8"));
+  const frameworkComponents = [
+    config.family,
+    config.target,
+    config.adapter,
+    ...(config.extensionPacks ?? []),
+  ];
+  const contract = enrichContract(contractJson, frameworkComponents);
+  const client = createControlClient({
+    family: config.family,
+    target: config.target,
+    adapter: config.adapter,
+    driver: config.driver,
+    extensionPacks: config.extensionPacks ?? [],
+    connection: databaseUrl,
+  });
 
-  if (result.status !== 0) {
-    throw new Error(
-      [
-        "Command failed: prisma-next db init --dry-run --json",
-        stdout.trim(),
-        String(result.stderr).trim(),
-      ]
-        .filter(Boolean)
-        .join("\n"),
-    );
+  const result = await client
+    .dbInit({
+      mode: "plan",
+      contract,
+      connection: databaseUrl,
+    })
+    .finally(() => client.close());
+
+  if (!result.ok) {
+    throw new Error(`Prisma Next db init planning failed: ${result.failure.summary}`);
   }
 
-  const jsonStart = stdout.indexOf("{");
-  if (jsonStart === -1) {
-    throw new Error(`Prisma Next dry-run did not return JSON:\n${stdout}`);
+  const statements = result.value.plan.sql ?? [];
+  if (statements.length === 0 && result.value.plan.operations.length > 0) {
+    throw new Error("Prisma Next db init plan did not expose SQL statements.");
   }
-
-  const output = JSON.parse(stdout.slice(jsonStart)) as {
-    plan?: {
-      preview?: {
-        statements?: Array<{ language: string; text: string }>;
-      };
-    };
-  };
-  const statements =
-    output.plan?.preview?.statements?.filter((statement) => statement.language === "sql") ?? [];
 
   const pool = new Pool({ connectionString: databaseUrl });
   try {
     for (const statement of statements) {
       try {
-        await pool.query(statement.text);
+        await pool.query(statement);
       } catch (error) {
-        throw new Error(`Failed to apply Prisma Next DDL statement:\n${statement.text}`, {
+        throw new Error(`Failed to apply Prisma Next DDL statement:\n${statement}`, {
           cause: error,
         });
       }
@@ -440,26 +402,6 @@ function classifyIndexSortDiffs(prisma6Only: string[], nextOnly: string[]) {
   return { expected, remainingPrisma6, remainingNext };
 }
 
-function classifySyntheticIdDiffs(nextOnly: string[]) {
-  const expected: string[] = [];
-  const remainingNext: string[] = [];
-
-  for (const item of nextOnly) {
-    const columnMatch = item.match(/^column:([^:]+):id:/);
-    const primaryMatch = item.match(/^primary:([^(]+)\(id\)$/);
-    const table = columnMatch?.[1] ?? primaryMatch?.[1];
-
-    if (table && syntheticIdTables.has(table)) {
-      expected.push(`Prisma Next synthetic id for no-id Prisma 6 table: ${item}`);
-      continue;
-    }
-
-    remainingNext.push(item);
-  }
-
-  return { expected, remainingNext };
-}
-
 function classifyForeignKeyIndexDiffs(nextOnly: string[], foreignKeys: Set<string>) {
   const expected: string[] = [];
   const remainingNext: string[] = [];
@@ -501,7 +443,7 @@ async function main() {
     const nextUrl = databaseUrlFor(nextDb);
 
     run(["exec", "tsx", "./scripts/prisma6-cli.ts", "db", "push", "--skip-generate"], prisma6Url);
-    await applyPrismaNextDryRunPlan(nextUrl);
+    await applyPrismaNextPlannedSql(nextUrl);
 
     const prisma6 = await snapshot(prisma6Url);
     const next = await snapshot(nextUrl);
@@ -509,15 +451,13 @@ async function main() {
     const prisma6Only = without(prisma6.items, next.items);
     const nextOnly = without(next.items, prisma6.items);
     const indexDiffs = classifyIndexSortDiffs(prisma6Only, nextOnly);
-    const syntheticIdDiffs = classifySyntheticIdDiffs(indexDiffs.remainingNext);
     const foreignKeyIndexDiffs = classifyForeignKeyIndexDiffs(
-      syntheticIdDiffs.remainingNext,
+      indexDiffs.remainingNext,
       next.foreignKeys,
     );
 
     const expected = [
       ...indexDiffs.expected,
-      ...syntheticIdDiffs.expected,
       ...foreignKeyIndexDiffs.expected,
       ...without(next.foreignKeys, prisma6.foreignKeys).map(
         (fk) => `Prisma Next FK DDL expected while Prisma 6 uses relationMode=prisma: ${fk}`,

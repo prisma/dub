@@ -70,8 +70,9 @@ not be carried over exactly as-is, and the compatible alternative used instead.
   Production `@dub/prisma`, `@dub/prisma/client`, and Prisma 6.19.x Client
   behavior remain authoritative for the app.
 - The vendored `@prisma-next/*` tarballs were packed from
-  `~/work/prisma/prisma-next-clean` at commit
-  `ece4e185cbc1033ae837b5567079f08d364621c7`.
+  `~/work/prisma/prisma-next` at commit
+  `a07eb10d2d947b74ea2f1719946be3bcd4fba007`, including local worktree
+  changes that add `@updatedAt` and id-less model support.
 - `packages/prisma/schema/contract.prisma` is the Prisma Next PSL contract.
   `contract.json` and `contract.d.ts` are emitted and committed next to it.
 - Prisma Next cannot express Prisma `relationMode = "prisma"` yet, so
@@ -81,10 +82,11 @@ not be carried over exactly as-is, and the compatible alternative used instead.
 - Prisma Next PSL does not preserve index sort direction today. Indexes that
   differ only by `sort: Asc` or `sort: Desc` are classified as expected DDL
   differences.
-- Prisma Next currently requires a single-field `@id` on SQL models and does
-  not support Dub's Prisma 6 no-id tables. The Next contract adds synthetic
-  `id` fields to those validation-only models while preserving their original
-  unique constraints.
+- Prisma Next supports Dub's Prisma 6 no-id tables. The Next contract no
+  longer adds validation-only synthetic `id` fields for those models.
+- Current `next:ddl:compare` output is 234 expected differences and 0
+  unexpected differences: 168 Prisma Next foreign keys plus 66 FK-derived
+  helper indexes.
 - `next:emit` runs a post-emit normalizer for current Prisma Next JSON
   artifacts where `false` literal defaults and native JSON named-type
   parameters are accepted by the emitter but rejected by runtime validation.
