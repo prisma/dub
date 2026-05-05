@@ -15,6 +15,11 @@ Current modules:
 - `workspace-runtime-module`: workspace fetchers with membership metadata.
 - `folder-runtime-module`: folder access lookups with filtered `FolderUser`
   includes.
+- `integration-runtime-module`: verified integrations installed in a workspace.
+- `tag-runtime-module`: tag list and search reads.
+- `token-runtime-module`: restricted token listing with user includes.
+- `webhook-runtime-module`: workspace webhook reads with `LinkWebhook` includes.
+- `domain-runtime-module`: workspace domain scalar reads.
 
 ## Runtime Capture
 

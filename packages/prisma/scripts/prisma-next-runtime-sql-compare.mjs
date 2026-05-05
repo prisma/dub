@@ -25,6 +25,9 @@ const dashboardIds = {
 };
 
 const fixtureValues = {
+  domainId: "domain_runtime_sql",
+  integrationId: "integration_runtime_sql",
+  installedIntegrationId: "installed_integration_runtime_sql",
   linkId: "link_runtime_sql",
   folderId: "fold_runtime_sql",
   programWorkspaceId: "proj_runtime_sql_program",
@@ -32,7 +35,10 @@ const fixtureValues = {
   programId: "prog_runtime_sql",
   projectId: "proj_runtime_sql",
   projectSlug: "runtime-sql-project",
+  restrictedTokenId: "restricted_token_runtime_sql",
+  tagId: "tag_runtime_sql",
   userId: "user_runtime_sql",
+  webhookId: "webhook_runtime_sql",
 };
 
 const quoteIdent = (value) => `"${value.replace(/"/g, '""')}"`;
@@ -286,7 +292,10 @@ async function createRuntimeComparisonSchema(pool) {
   `);
   await pool.query(`
     create table "User" (
-      "id" text primary key
+      "id" text primary key,
+      "name" text,
+      "image" text,
+      "isMachine" boolean not null default false
     )
   `);
   await pool.query(`
@@ -363,6 +372,119 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create table "Integration" (
+      "id" text primary key,
+      "userId" text,
+      "projectId" text not null,
+      "name" text not null,
+      "slug" text unique not null,
+      "developer" text not null,
+      "website" text not null,
+      "verified" boolean not null default false,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create table "InstalledIntegration" (
+      "id" text primary key,
+      "userId" text not null,
+      "integrationId" text not null,
+      "projectId" text not null,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "credentials" jsonb,
+      "settings" jsonb,
+      unique ("userId", "integrationId", "projectId")
+    )
+  `);
+  await pool.query(`
+    create table "Tag" (
+      "id" text primary key,
+      "name" text not null,
+      "color" text not null default 'blue',
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "projectId" text not null,
+      unique ("name", "projectId")
+    )
+  `);
+  await pool.query(`
+    create table "RestrictedToken" (
+      "id" text primary key,
+      "name" text not null,
+      "hashedKey" text unique not null,
+      "partialKey" text not null,
+      "scopes" text,
+      "expires" timestamp(3),
+      "lastUsed" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "userId" text not null,
+      "projectId" text not null,
+      "installationId" text
+    )
+  `);
+  await pool.query(`
+    create table "Webhook" (
+      "id" text primary key,
+      "projectId" text not null,
+      "installationId" text,
+      "receiver" text not null default 'user',
+      "name" text not null,
+      "url" text not null,
+      "secret" text not null,
+      "triggers" jsonb not null,
+      "consecutiveFailures" integer not null default 0,
+      "lastFailedAt" timestamp(3),
+      "disabledAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create table "LinkWebhook" (
+      "id" text primary key,
+      "linkId" text not null,
+      "webhookId" text not null,
+      unique ("linkId", "webhookId")
+    )
+  `);
+  await pool.query(`
+    create table "Domain" (
+      "id" text primary key,
+      "slug" text unique not null,
+      "verified" boolean not null default false,
+      "placeholder" text,
+      "expiredUrl" text,
+      "notFoundUrl" text,
+      "primary" boolean not null default false,
+      "archived" boolean not null default false,
+      "lastChecked" timestamp(3) not null default current_timestamp,
+      "logo" text,
+      "appleAppSiteAssociation" jsonb,
+      "assetLinks" jsonb,
+      "deepviewData" jsonb,
+      "linkRetentionDays" integer,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "projectId" text
+    )
+  `);
+  await pool.query(`
+    create table "RegisteredDomain" (
+      "id" text primary key,
+      "slug" text not null,
+      "projectId" text not null,
+      "domainId" text unique,
+      "autoRenewalDisabledAt" timestamp(3),
+      "renewalFee" integer not null default 1200,
+      "expiresAt" timestamp(3) not null,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
     create table "Dashboard" (
       "id" text primary key,
       "linkId" text unique,
@@ -381,11 +503,17 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "RestrictedToken", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
-  await pool.query('insert into "User" ("id") values ($1)', [
-    fixtureValues.userId,
-  ]);
+  await pool.query(
+    'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
+    [
+      fixtureValues.userId,
+      "Runtime SQL User",
+      "https://example.com/avatar.png",
+      false,
+    ],
+  );
   await pool.query(
     'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
     [
@@ -476,6 +604,119 @@ async function resetRuntimeFixture(pool, options = {}) {
       5,
     ],
   );
+  await pool.query(
+    'insert into "Integration" ("id", "userId", "projectId", "name", "slug", "developer", "website", "verified", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [
+      fixtureValues.integrationId,
+      fixtureValues.userId,
+      fixtureValues.projectId,
+      "Runtime SQL Integration",
+      "runtime-sql-integration",
+      "Dub",
+      "https://dub.co",
+      true,
+      new Date("2024-01-06T00:00:00.000Z"),
+      new Date("2024-01-06T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "InstalledIntegration" ("id", "userId", "integrationId", "projectId", "createdAt", "updatedAt", "credentials", "settings") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    [
+      fixtureValues.installedIntegrationId,
+      fixtureValues.userId,
+      fixtureValues.integrationId,
+      fixtureValues.projectId,
+      new Date("2024-01-06T01:00:00.000Z"),
+      new Date("2024-01-06T01:00:00.000Z"),
+      JSON.stringify({ token: "runtime-sql" }),
+      JSON.stringify({ enabled: true }),
+    ],
+  );
+  await pool.query(
+    'insert into "Tag" ("id", "name", "color", "createdAt", "updatedAt", "projectId") values ($1, $2, $3, $4, $5, $6)',
+    [
+      fixtureValues.tagId,
+      "Runtime SQL Tag",
+      "blue",
+      new Date("2024-01-07T00:00:00.000Z"),
+      new Date("2024-01-07T00:00:00.000Z"),
+      fixtureValues.projectId,
+    ],
+  );
+  await pool.query(
+    'insert into "RestrictedToken" ("id", "name", "hashedKey", "partialKey", "scopes", "lastUsed", "createdAt", "updatedAt", "userId", "projectId", "installationId") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+    [
+      fixtureValues.restrictedTokenId,
+      "Runtime SQL Token",
+      "hashed_runtime_sql",
+      "dub_1234",
+      "links.read domains.read",
+      new Date("2024-01-08T00:00:00.000Z"),
+      new Date("2024-01-08T00:00:00.000Z"),
+      new Date("2024-01-08T00:00:00.000Z"),
+      fixtureValues.userId,
+      fixtureValues.projectId,
+      null,
+    ],
+  );
+  await pool.query(
+    'insert into "Webhook" ("id", "projectId", "installationId", "receiver", "name", "url", "secret", "triggers", "disabledAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+    [
+      fixtureValues.webhookId,
+      fixtureValues.projectId,
+      null,
+      "user",
+      "Runtime SQL Webhook",
+      "https://example.com/webhook",
+      "secret_runtime_sql",
+      JSON.stringify(["link.created", "link.updated"]),
+      null,
+      new Date("2024-01-09T00:00:00.000Z"),
+      new Date("2024-01-09T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "LinkWebhook" ("id", "linkId", "webhookId") values ($1, $2, $3)',
+    ["link_webhook_runtime_sql", fixtureValues.linkId, fixtureValues.webhookId],
+  );
+  await pool.query(
+    'insert into "Domain" ("id", "slug", "verified", "placeholder", "expiredUrl", "notFoundUrl", "primary", "archived", "lastChecked", "logo", "appleAppSiteAssociation", "assetLinks", "deepviewData", "linkRetentionDays", "createdAt", "updatedAt", "projectId") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
+    [
+      fixtureValues.domainId,
+      "runtime-sql.example.com",
+      true,
+      "https://example.com",
+      null,
+      null,
+      true,
+      false,
+      new Date("2024-01-10T00:00:00.000Z"),
+      null,
+      JSON.stringify({ applinks: { apps: [] } }),
+      JSON.stringify([
+        { relation: ["delegate_permission/common.handle_all_urls"] },
+      ]),
+      JSON.stringify({}),
+      30,
+      new Date("2024-01-10T00:00:00.000Z"),
+      new Date("2024-01-10T00:00:00.000Z"),
+      fixtureValues.projectId,
+    ],
+  );
+  await pool.query(
+    'insert into "RegisteredDomain" ("id", "slug", "projectId", "domainId", "autoRenewalDisabledAt", "renewalFee", "expiresAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+    [
+      "registered_domain_runtime_sql",
+      "runtime-sql.example.com",
+      fixtureValues.projectId,
+      fixtureValues.domainId,
+      null,
+      1200,
+      new Date("2025-01-10T00:00:00.000Z"),
+      new Date("2024-01-10T00:00:00.000Z"),
+      new Date("2024-01-10T00:00:00.000Z"),
+    ],
+  );
 
   if (includeDashboard) {
     await pool.query(
@@ -499,6 +740,14 @@ async function snapshotRuntimeFixture(pool) {
     users,
     projects,
     projectUsers,
+    integrations,
+    installedIntegrations,
+    tags,
+    restrictedTokens,
+    webhooks,
+    linkWebhooks,
+    domains,
+    registeredDomains,
     folders,
     folderUsers,
     links,
@@ -507,6 +756,14 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "User" order by "id"'),
     pool.query('select * from "Project" order by "id"'),
     pool.query('select * from "ProjectUsers" order by "id"'),
+    pool.query('select * from "Integration" order by "id"'),
+    pool.query('select * from "InstalledIntegration" order by "id"'),
+    pool.query('select * from "Tag" order by "id"'),
+    pool.query('select * from "RestrictedToken" order by "id"'),
+    pool.query('select * from "Webhook" order by "id"'),
+    pool.query('select * from "LinkWebhook" order by "id"'),
+    pool.query('select * from "Domain" order by "id"'),
+    pool.query('select * from "RegisteredDomain" order by "id"'),
     pool.query('select * from "Folder" order by "id"'),
     pool.query('select * from "FolderUser" order by "id"'),
     pool.query('select * from "Link" order by "id"'),
@@ -517,6 +774,14 @@ async function snapshotRuntimeFixture(pool) {
     User: users.rows,
     Project: projects.rows,
     ProjectUsers: projectUsers.rows,
+    Integration: integrations.rows,
+    InstalledIntegration: installedIntegrations.rows,
+    Tag: tags.rows,
+    RestrictedToken: restrictedTokens.rows,
+    Webhook: webhooks.rows,
+    LinkWebhook: linkWebhooks.rows,
+    Domain: domains.rows,
+    RegisteredDomain: registeredDomains.rows,
     Folder: folders.rows,
     FolderUser: folderUsers.rows,
     Link: links.rows,
@@ -1072,6 +1337,300 @@ const folderModule = {
   ],
 };
 
+const integrationModule = {
+  id: "integration-runtime-module",
+  description:
+    "Module-sized comparison for verified integrations installed in a workspace.",
+  operations: [
+    {
+      id: "integration.read.verified-installed-for-workspace",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.integration.findMany({
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+          where: {
+            verified: true,
+            installations: {
+              some: {
+                projectId: fixtureValues.projectId,
+              },
+            },
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Integration.where({ verified: true })
+          .where((integration) =>
+            integration.installations.some({
+              projectId: fixtureValues.projectId,
+            }),
+          )
+          .select("id", "name", "slug")
+          .all(),
+    },
+  ],
+};
+
+const tagModule = {
+  id: "tag-runtime-module",
+  description: "Module-sized comparison for tag list and search reads.",
+  operations: [
+    {
+      id: "tag.read.list-for-workspace",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.tag.findMany({
+          where: {
+            projectId: fixtureValues.projectId,
+          },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+          orderBy: {
+            name: "asc",
+          },
+          take: 100,
+          skip: 0,
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Tag.where({ projectId: fixtureValues.projectId })
+          .select("id", "name", "color")
+          .orderBy((tag) => tag.name.asc())
+          .take(100)
+          .skip(0)
+          .all(),
+    },
+    {
+      id: "tag.read.search-for-workspace",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.tag.findMany({
+          where: {
+            projectId: fixtureValues.projectId,
+            name: {
+              contains: "Runtime",
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+          orderBy: {
+            name: "asc",
+          },
+          take: 100,
+          skip: 0,
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Tag.where({ projectId: fixtureValues.projectId })
+          .where((tag) => tag.name.like("%Runtime%"))
+          .select("id", "name", "color")
+          .orderBy((tag) => tag.name.asc())
+          .take(100)
+          .skip(0)
+          .all(),
+    },
+  ],
+};
+
+const tokenModule = {
+  id: "token-runtime-module",
+  description:
+    "Module-sized comparison for restricted token listing with user includes.",
+  operations: [
+    {
+      id: "token.read.workspace-restricted-tokens",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.restrictedToken.findMany({
+          where: {
+            projectId: fixtureValues.projectId,
+            installationId: null,
+          },
+          select: {
+            id: true,
+            name: true,
+            partialKey: true,
+            scopes: true,
+            lastUsed: true,
+            createdAt: true,
+            updatedAt: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                isMachine: true,
+              },
+            },
+          },
+          orderBy: [{ lastUsed: "desc" }, { createdAt: "desc" }],
+          take: 100,
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.RestrictedToken.where({
+          projectId: fixtureValues.projectId,
+          installationId: null,
+        })
+          .select(
+            "id",
+            "name",
+            "partialKey",
+            "scopes",
+            "lastUsed",
+            "createdAt",
+            "updatedAt",
+          )
+          .include("user", (user) =>
+            user.select("id", "name", "image", "isMachine"),
+          )
+          .orderBy([
+            (token) => token.lastUsed.desc(),
+            (token) => token.createdAt.desc(),
+          ])
+          .take(100)
+          .all(),
+    },
+  ],
+};
+
+const webhookModule = {
+  id: "webhook-runtime-module",
+  description:
+    "Module-sized comparison for workspace webhook reads with LinkWebhook includes.",
+  operations: [
+    {
+      id: "webhook.read.enabled-user-webhooks",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.webhook.findMany({
+          where: {
+            projectId: fixtureValues.projectId,
+            disabledAt: null,
+            installationId: null,
+          },
+          select: {
+            id: true,
+            name: true,
+            url: true,
+            secret: true,
+            triggers: true,
+            disabledAt: true,
+            links: true,
+            receiver: true,
+            installationId: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Webhook.where({
+          projectId: fixtureValues.projectId,
+          disabledAt: null,
+          installationId: null,
+        })
+          .select(
+            "id",
+            "name",
+            "url",
+            "secret",
+            "triggers",
+            "disabledAt",
+            "receiver",
+            "installationId",
+          )
+          .include("links")
+          .orderBy((webhook) => webhook.createdAt.desc())
+          .all(),
+    },
+  ],
+};
+
+const domainModule = {
+  id: "domain-runtime-module",
+  description: "Module-sized comparison for workspace domain scalar reads.",
+  operations: [
+    {
+      id: "domain.read.workspace-domain-scalars",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.domain.findMany({
+          where: {
+            projectId: fixtureValues.projectId,
+            archived: false,
+          },
+          select: {
+            id: true,
+            slug: true,
+            verified: true,
+            placeholder: true,
+            expiredUrl: true,
+            notFoundUrl: true,
+            primary: true,
+            archived: true,
+            lastChecked: true,
+            logo: true,
+            appleAppSiteAssociation: true,
+            assetLinks: true,
+            deepviewData: true,
+            linkRetentionDays: true,
+            createdAt: true,
+            updatedAt: true,
+            projectId: true,
+          },
+          take: 100,
+          skip: 0,
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Domain.where({
+          projectId: fixtureValues.projectId,
+          archived: false,
+        })
+          .select(
+            "id",
+            "slug",
+            "verified",
+            "placeholder",
+            "expiredUrl",
+            "notFoundUrl",
+            "primary",
+            "archived",
+            "lastChecked",
+            "logo",
+            "appleAppSiteAssociation",
+            "assetLinks",
+            "deepviewData",
+            "linkRetentionDays",
+            "createdAt",
+            "updatedAt",
+            "projectId",
+          )
+          .take(100)
+          .skip(0)
+          .all(),
+    },
+  ],
+};
+
 const runtimeModules = [
   dashboardModule,
   userModule,
@@ -1079,6 +1638,11 @@ const runtimeModules = [
   workspaceProductModule,
   workspaceModule,
   folderModule,
+  integrationModule,
+  tagModule,
+  tokenModule,
+  webhookModule,
+  domainModule,
 ];
 
 async function capture(label, collector, runOperation) {
