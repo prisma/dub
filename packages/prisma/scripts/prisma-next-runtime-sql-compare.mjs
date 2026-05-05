@@ -35,6 +35,9 @@ const fixtureValues = {
   commissionId: "commission_runtime_sql",
   commissionProcessedId: "commission_processed_runtime_sql",
   invoiceId: "invoice_runtime_sql",
+  campaignId: "campaign_runtime_sql",
+  notificationEmailId: "notification_email_runtime_sql",
+  notificationEmailOpenedId: "notification_email_opened_runtime_sql",
   partnerId: "partner_runtime_sql",
   payoutId: "payout_runtime_sql",
   payoutPendingId: "payout_pending_runtime_sql",
@@ -854,6 +857,30 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create type "NotificationEmailType" as enum (
+      'Message',
+      'Bounty',
+      'Campaign'
+    )
+  `);
+  await pool.query(`
+    create table "NotificationEmail" (
+      "id" text primary key,
+      "emailId" text unique not null,
+      "type" "NotificationEmailType" not null,
+      "messageId" text,
+      "bountyId" text,
+      "campaignId" text,
+      "programId" text,
+      "partnerId" text,
+      "recipientUserId" text,
+      "deliveredAt" timestamp(3),
+      "openedAt" timestamp(3),
+      "bouncedAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp
+    )
+  `);
+  await pool.query(`
     create table "Customer" (
       "id" text primary key,
       "name" text,
@@ -896,7 +923,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "NotificationEmail", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -1118,6 +1145,38 @@ async function resetRuntimeFixture(pool, options = {}) {
       "processed",
       new Date("2024-01-14T00:00:00.000Z"),
       new Date("2024-01-14T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "NotificationEmail" ("id", "emailId", "type", "campaignId", "programId", "partnerId", "recipientUserId", "deliveredAt", "openedAt", "bouncedAt", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+    [
+      fixtureValues.notificationEmailId,
+      "notification-runtime-sql@example.com",
+      "Campaign",
+      fixtureValues.campaignId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.userId,
+      null,
+      null,
+      null,
+      new Date("2024-01-15T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "NotificationEmail" ("id", "emailId", "type", "campaignId", "programId", "partnerId", "recipientUserId", "deliveredAt", "openedAt", "bouncedAt", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+    [
+      fixtureValues.notificationEmailOpenedId,
+      "notification-opened-runtime-sql@example.com",
+      "Campaign",
+      fixtureValues.campaignId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.userId,
+      new Date("2024-01-15T01:00:00.000Z"),
+      new Date("2024-01-15T02:00:00.000Z"),
+      new Date("2024-01-15T03:00:00.000Z"),
+      new Date("2024-01-15T00:30:00.000Z"),
     ],
   );
   await pool.query(
@@ -1359,6 +1418,7 @@ async function snapshotRuntimeFixture(pool) {
     invoices,
     payouts,
     commissions,
+    notificationEmails,
     customers,
     folders,
     folderUsers,
@@ -1383,6 +1443,7 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Invoice" order by "id"'),
     pool.query('select * from "Payout" order by "id"'),
     pool.query('select * from "Commission" order by "id"'),
+    pool.query('select * from "NotificationEmail" order by "id"'),
     pool.query('select * from "Customer" order by "id"'),
     pool.query('select * from "Folder" order by "id"'),
     pool.query('select * from "FolderUser" order by "id"'),
@@ -1409,6 +1470,7 @@ async function snapshotRuntimeFixture(pool) {
     Invoice: invoices.rows,
     Payout: payouts.rows,
     Commission: commissions.rows,
+    NotificationEmail: notificationEmails.rows,
     Customer: customers.rows,
     Folder: folders.rows,
     FolderUser: folderUsers.rows,
@@ -2078,6 +2140,140 @@ const commissionsPayoutsModule = {
           .update({
             amount: 700,
           }),
+    },
+  ],
+};
+
+const notificationEmailModule = {
+  id: "notification-email-runtime-module",
+  description:
+    "Module-sized comparison for notification email webhook reads/writes and campaign summary aggregation.",
+  operations: [
+    {
+      id: "notification-email.read.by-email-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.notificationEmail.findUnique({
+          where: {
+            emailId: "notification-runtime-sql@example.com",
+          },
+          select: {
+            id: true,
+            emailId: true,
+            type: true,
+            deliveredAt: true,
+            openedAt: true,
+            bouncedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.NotificationEmail.where({
+          emailId: "notification-runtime-sql@example.com",
+        })
+          .select(
+            "id",
+            "emailId",
+            "type",
+            "deliveredAt",
+            "openedAt",
+            "bouncedAt",
+          )
+          .first(),
+    },
+    {
+      id: "notification-email.update.delivered-at",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.notificationEmail.update({
+          where: {
+            emailId: "notification-runtime-sql@example.com",
+          },
+          data: {
+            deliveredAt: new Date("2024-01-15T04:00:00.000Z"),
+          },
+          select: {
+            id: true,
+            emailId: true,
+            deliveredAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.NotificationEmail.where({
+          emailId: "notification-runtime-sql@example.com",
+        })
+          .select("id", "emailId", "deliveredAt")
+          .update({
+            deliveredAt: new Date("2024-01-15T04:00:00.000Z"),
+          }),
+    },
+    {
+      id: "notification-email.aggregate.campaign-summary",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const [queryResult] = await prisma.$queryRaw`
+          SELECT
+            COUNT(*) AS sent,
+            SUM(CASE WHEN "deliveredAt" IS NOT NULL THEN 1 ELSE 0 END) AS delivered,
+            SUM(CASE WHEN "openedAt" IS NOT NULL THEN 1 ELSE 0 END) AS opened,
+            SUM(CASE WHEN "bouncedAt" IS NOT NULL THEN 1 ELSE 0 END) AS bounced
+          FROM "NotificationEmail"
+          WHERE "campaignId" = ${fixtureValues.campaignId}
+        `;
+
+        return {
+          sent: Number(queryResult.sent),
+          delivered: Number(queryResult.delivered),
+          opened: Number(queryResult.opened),
+          bounced: Number(queryResult.bounced),
+        };
+      },
+      prismaNext: async ({ db }) => {
+        const sent = await db.orm.NotificationEmail.where({
+          campaignId: fixtureValues.campaignId,
+        }).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const delivered = await db.orm.NotificationEmail.where(
+          (notificationEmail) =>
+            and(
+              notificationEmail.campaignId.eq(fixtureValues.campaignId),
+              notificationEmail.deliveredAt.isNotNull(),
+            ),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const opened = await db.orm.NotificationEmail.where(
+          (notificationEmail) =>
+            and(
+              notificationEmail.campaignId.eq(fixtureValues.campaignId),
+              notificationEmail.openedAt.isNotNull(),
+            ),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const bounced = await db.orm.NotificationEmail.where(
+          (notificationEmail) =>
+            and(
+              notificationEmail.campaignId.eq(fixtureValues.campaignId),
+              notificationEmail.bouncedAt.isNotNull(),
+            ),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+
+        return {
+          sent: sent.count,
+          delivered: delivered.count,
+          opened: opened.count,
+          bounced: bounced.count,
+        };
+      },
     },
   ],
 };
@@ -3475,6 +3671,7 @@ const runtimeModules = [
   edgeLinkModule,
   analyticsModule,
   commissionsPayoutsModule,
+  notificationEmailModule,
   usageCounterModule,
   workspaceProductModule,
   workspaceModule,

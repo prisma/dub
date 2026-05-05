@@ -17,6 +17,8 @@ Current modules:
 - `commissions-payouts-runtime-module`: commissions and payouts reads,
   aggregates, grouped aggregates, relation filters, includes, and update-count
   writes.
+- `notification-email-runtime-module`: notification email webhook reads/writes
+  plus campaign summary aggregation.
 - `usage-counter-runtime-module`: link, workspace, and program-enrollment
   usage counter reads and writes.
 - `workspace-product-runtime-module`: workspace product resolution from
@@ -68,6 +70,15 @@ Tracked write-query differences:
 - Scalar update writes such as `payouts.update.pending-amount` keep matching
   result shapes, but Prisma 6 advances `updatedAt` and Prisma Next currently
   leaves it unchanged unless the application passes an explicit value.
+- `notification-email.aggregate.campaign-summary` maps one Prisma 6 raw SQL
+  query with `SUM(CASE WHEN ...)` into four Prisma Next high-level count
+  aggregates because that CASE aggregate shape is not represented by the
+  current high-level ORM API.
+- `notification-email.update.delivered-at` exposes a parameter-encoding
+  difference: Prisma 6 sends the `Date` update value as a timestamp string,
+  while Prisma Next sends a JavaScript `Date` to the driver. The returned JS
+  value shape matches, but the raw fixture snapshot captures the resulting
+  `timestamp(3)` state difference.
 
 ## Runtime Capture
 
