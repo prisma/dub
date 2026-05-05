@@ -12,6 +12,9 @@ Current modules:
   compound identity.
 - `workspace-product-runtime-module`: workspace product resolution from
   `Project.defaultProgramId`.
+- `workspace-runtime-module`: workspace fetchers with membership metadata.
+- `folder-runtime-module`: folder access lookups with filtered `FolderUser`
+  includes.
 
 ## Runtime Capture
 

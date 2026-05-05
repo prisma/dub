@@ -294,8 +294,17 @@ async function createRuntimeComparisonSchema(pool) {
       "id" text primary key,
       "name" text,
       "slug" text unique,
+      "logo" text,
       "defaultProgramId" text unique,
-      "plan" text not null default 'pro'
+      "plan" text not null default 'pro',
+      "stripeId" text,
+      "billingCycleStart" integer not null default 1,
+      "totalLinks" integer not null default 0,
+      "totalClicks" integer not null default 0,
+      "usage" integer not null default 0,
+      "usageLimit" integer not null default 1000,
+      "linksUsage" integer not null default 0,
+      "createdAt" timestamp(3) not null default current_timestamp
     )
   `);
   await pool.query(`
@@ -304,10 +313,16 @@ async function createRuntimeComparisonSchema(pool) {
       "domain" text not null,
       "key" text not null,
       "url" text not null,
+      "shortLink" varchar(400),
       "folderId" text,
       "projectId" text,
       "userId" text,
+      "programId" text,
+      "partnerId" text,
       "publicStats" boolean not null default false,
+      "clicks" integer not null default 0,
+      "lastClicked" timestamp(3),
+      unique ("shortLink"),
       unique ("domain", "key")
     )
   `);
@@ -315,7 +330,36 @@ async function createRuntimeComparisonSchema(pool) {
     create table "Folder" (
       "id" text primary key,
       "name" text not null,
-      "projectId" text
+      "description" text,
+      "projectId" text,
+      "type" text not null default 'default',
+      "accessLevel" text,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create table "FolderUser" (
+      "id" text primary key,
+      "folderId" text not null,
+      "userId" text not null,
+      "role" text,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("folderId", "userId")
+    )
+  `);
+  await pool.query(`
+    create table "ProjectUsers" (
+      "id" text primary key,
+      "role" text not null default 'member',
+      "userId" text not null,
+      "projectId" text not null,
+      "workspacePreferences" jsonb,
+      "defaultFolderId" text,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("userId", "projectId")
     )
   `);
   await pool.query(`
@@ -337,46 +381,99 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query('insert into "User" ("id") values ($1)', [
     fixtureValues.userId,
   ]);
   await pool.query(
-    'insert into "Project" ("id", "name", "slug", "defaultProgramId", "plan") values ($1, $2, $3, $4, $5)',
+    'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
     [
       fixtureValues.projectId,
       "Runtime SQL Project",
       fixtureValues.projectSlug,
+      "https://example.com/logo.png",
       null,
       "pro",
+      "sub_runtime_sql",
+      7,
+      1,
+      10,
+      25,
+      1000,
+      1,
+      new Date("2024-01-03T00:00:00.000Z"),
     ],
   );
   await pool.query(
-    'insert into "Project" ("id", "name", "slug", "defaultProgramId", "plan") values ($1, $2, $3, $4, $5)',
+    'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
     [
       fixtureValues.programWorkspaceId,
       "Runtime SQL Program Workspace",
       fixtureValues.programWorkspaceSlug,
+      null,
       fixtureValues.programId,
       "business",
+      null,
+      1,
+      0,
+      3,
+      9,
+      5000,
+      0,
+      new Date("2024-01-04T00:00:00.000Z"),
     ],
   );
   await pool.query(
-    'insert into "Folder" ("id", "name", "projectId") values ($1, $2, $3)',
-    [fixtureValues.folderId, "Runtime SQL Folder", fixtureValues.projectId],
+    'insert into "ProjectUsers" ("id", "role", "userId", "projectId", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6)',
+    [
+      "project_user_runtime_sql",
+      "owner",
+      fixtureValues.userId,
+      fixtureValues.projectId,
+      new Date("2024-01-03T01:00:00.000Z"),
+      new Date("2024-01-03T01:00:00.000Z"),
+    ],
   );
   await pool.query(
-    'insert into "Link" ("id", "domain", "key", "url", "folderId", "projectId", "userId", "publicStats") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    'insert into "Folder" ("id", "name", "description", "projectId", "type", "accessLevel", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    [
+      fixtureValues.folderId,
+      "Runtime SQL Folder",
+      "Folder used by runtime SQL comparisons",
+      fixtureValues.projectId,
+      "default",
+      "write",
+      new Date("2024-01-05T00:00:00.000Z"),
+      new Date("2024-01-05T01:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "FolderUser" ("id", "folderId", "userId", "role", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6)',
+    [
+      "folder_user_runtime_sql",
+      fixtureValues.folderId,
+      fixtureValues.userId,
+      "owner",
+      new Date("2024-01-05T02:00:00.000Z"),
+      new Date("2024-01-05T02:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Link" ("id", "domain", "key", "url", "shortLink", "folderId", "projectId", "userId", "programId", "partnerId", "publicStats", "clicks") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
     [
       fixtureValues.linkId,
       "dub.sh",
       "runtime-sql",
       "https://example.com/runtime-sql",
+      "https://dub.sh/runtime-sql",
       fixtureValues.folderId,
       fixtureValues.projectId,
       fixtureValues.userId,
+      fixtureValues.programId,
+      "partner_runtime_sql",
       false,
+      5,
     ],
   );
 
@@ -398,10 +495,20 @@ async function resetRuntimeFixture(pool, options = {}) {
 }
 
 async function snapshotRuntimeFixture(pool) {
-  const [users, projects, folders, links, dashboards] = await Promise.all([
+  const [
+    users,
+    projects,
+    projectUsers,
+    folders,
+    folderUsers,
+    links,
+    dashboards,
+  ] = await Promise.all([
     pool.query('select * from "User" order by "id"'),
     pool.query('select * from "Project" order by "id"'),
+    pool.query('select * from "ProjectUsers" order by "id"'),
     pool.query('select * from "Folder" order by "id"'),
+    pool.query('select * from "FolderUser" order by "id"'),
     pool.query('select * from "Link" order by "id"'),
     pool.query('select * from "Dashboard" order by "id"'),
   ]);
@@ -409,7 +516,9 @@ async function snapshotRuntimeFixture(pool) {
   return {
     User: users.rows,
     Project: projects.rows,
+    ProjectUsers: projectUsers.rows,
     Folder: folders.rows,
+    FolderUser: folderUsers.rows,
     Link: links.rows,
     Dashboard: dashboards.rows,
   };
@@ -753,11 +862,223 @@ const workspaceProductModule = {
   ],
 };
 
+const workspaceModule = {
+  id: "workspace-runtime-module",
+  description:
+    "Module-sized comparison for common workspace fetchers that include membership metadata.",
+  operations: [
+    {
+      id: "workspace.read.default-for-user",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.findFirst({
+          where: {
+            users: {
+              some: {
+                userId: fixtureValues.userId,
+              },
+            },
+          },
+          select: {
+            slug: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Project.where((project) =>
+          project.users.some({ userId: fixtureValues.userId }),
+        )
+          .select("slug")
+          .first(),
+    },
+    {
+      id: "workspace.read.by-slug-with-user-role",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.findUnique({
+          where: {
+            slug: fixtureValues.projectSlug,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+            usage: true,
+            usageLimit: true,
+            plan: true,
+            stripeId: true,
+            billingCycleStart: true,
+            createdAt: true,
+            users: {
+              where: {
+                userId: fixtureValues.userId,
+              },
+              select: {
+                role: true,
+              },
+            },
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Project.where({
+          slug: fixtureValues.projectSlug,
+        })
+          .select(
+            "id",
+            "name",
+            "slug",
+            "logo",
+            "usage",
+            "usageLimit",
+            "plan",
+            "stripeId",
+            "billingCycleStart",
+            "createdAt",
+          )
+          .include("users", (users) =>
+            users.where({ userId: fixtureValues.userId }).select("role"),
+          )
+          .first(),
+    },
+  ],
+};
+
+const normalizeFolderAccessResult = (folder, workspaceId) => {
+  if (!folder || folder.projectId !== workspaceId) {
+    return null;
+  }
+
+  return {
+    id: folder.id,
+    name: folder.name,
+    description: folder.description,
+    type: folder.type,
+    accessLevel: folder.accessLevel,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt,
+    user: folder.users.length > 0 ? folder.users[0] : null,
+  };
+};
+
+const folderModule = {
+  id: "folder-runtime-module",
+  description:
+    "Module-sized comparison for folder access lookups with filtered FolderUser includes.",
+  operations: [
+    {
+      id: "folder.read.by-id-with-user",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const folder = await prisma.folder.findUnique({
+          where: {
+            id: fixtureValues.folderId,
+          },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            type: true,
+            accessLevel: true,
+            createdAt: true,
+            updatedAt: true,
+            projectId: true,
+            users: {
+              where: {
+                userId: fixtureValues.userId,
+              },
+              take: 1,
+            },
+          },
+        });
+        return normalizeFolderAccessResult(folder, fixtureValues.projectId);
+      },
+      prismaNext: async ({ db }) => {
+        const folder = await db.orm.Folder.where({
+          id: fixtureValues.folderId,
+        })
+          .select(
+            "id",
+            "name",
+            "description",
+            "type",
+            "accessLevel",
+            "createdAt",
+            "updatedAt",
+            "projectId",
+          )
+          .include("users", (users) =>
+            users.where({ userId: fixtureValues.userId }).take(1),
+          )
+          .first();
+        return normalizeFolderAccessResult(folder, fixtureValues.projectId);
+      },
+    },
+    {
+      id: "folder.read.missing-by-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const folder = await prisma.folder.findUnique({
+          where: {
+            id: "missing_runtime_sql_folder",
+          },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            type: true,
+            accessLevel: true,
+            createdAt: true,
+            updatedAt: true,
+            projectId: true,
+            users: {
+              where: {
+                userId: fixtureValues.userId,
+              },
+              take: 1,
+            },
+          },
+        });
+        return normalizeFolderAccessResult(folder, fixtureValues.projectId);
+      },
+      prismaNext: async ({ db }) => {
+        const folder = await db.orm.Folder.where({
+          id: "missing_runtime_sql_folder",
+        })
+          .select(
+            "id",
+            "name",
+            "description",
+            "type",
+            "accessLevel",
+            "createdAt",
+            "updatedAt",
+            "projectId",
+          )
+          .include("users", (users) =>
+            users.where({ userId: fixtureValues.userId }).take(1),
+          )
+          .first();
+        return normalizeFolderAccessResult(folder, fixtureValues.projectId);
+      },
+    },
+  ],
+};
+
 const runtimeModules = [
   dashboardModule,
   userModule,
   linkModule,
   workspaceProductModule,
+  workspaceModule,
+  folderModule,
 ];
 
 async function capture(label, collector, runOperation) {
