@@ -6,20 +6,26 @@
   "module": "./index.ts",
   "types": "./index.ts",
   "scripts": {
-    "generate": "npx prisma generate --schema=./schema",
-    "push": "npx prisma db push --schema=./schema",
+    "generate": "tsx ./scripts/prisma6-cli.ts generate",
+    "push": "tsx ./scripts/prisma6-cli.ts db push",
     "postdeploy:postgres": "tsx ./scripts/postdeploy-postgres.ts",
-    "studio": "npx prisma studio --schema=./schema --browser none",
+    "studio": "tsx ./scripts/prisma6-cli.ts studio --browser none",
     "prebuild": "pnpm run generate",
     "predev": "pnpm run generate",
-    "format": "npx prisma format --schema=./schema"
+    "format": "tsx ./scripts/prisma6-cli.ts format",
+    "next:emit": "prisma-next contract emit --config ./prisma-next.config.ts && tsx ./scripts/prisma-next-normalize-contract.ts",
+    "next:smoke": "node ./scripts/prisma-next-smoke.mjs",
+    "next:ddl:compare": "tsx ./scripts/prisma-next-ddl-compare.ts",
+    "next:validate": "pnpm run next:emit && pnpm run next:smoke && pnpm run next:ddl:compare"
   },
   "dependencies": {
     "@prisma/adapter-pg": "6.19.1",
     "@prisma/client": "6.19.1",
-    "pg": "8.16.0"
+    "pg": "8.16.0",
+    "@prisma-next/postgres": "file:./vendor/prisma-next/prisma-next-postgres-0.0.1.tgz"
   },
   "devDependencies": {
+    "@prisma-next/cli": "file:./vendor/prisma-next/prisma-next-cli-0.0.1.tgz",
     "@types/pg": "8.11.11",
     "@types/node": "18.11.9",
     "prisma": "6.19.1",
@@ -29,7 +35,11 @@
   "exports": {
     ".": "./index.ts",
     "./edge": "./edge.ts",
-    "./client": "./client.ts"
+    "./client": "./client.ts",
+    "./next": {
+      "types": "./next.d.ts",
+      "default": "./next.mjs"
+    }
   },
   "author": "Steven Tey <stevensteel97@gmail.com>",
   "homepage": "https://dub.co",

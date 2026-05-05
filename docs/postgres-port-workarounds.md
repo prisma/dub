@@ -63,3 +63,36 @@ not be carried over exactly as-is, and the compatible alternative used instead.
 - `pnpm turbo build --filter=web` compiles and passes TypeScript, then stops
   during Next page-data collection on an unrelated existing
   `@dub/utils` `optimizePackageImports` virtual module issue.
+
+## Prisma Next Hybrid Trial
+
+- Prisma Next is present as a parallel authoring and validation path only.
+  Production `@dub/prisma`, `@dub/prisma/client`, and Prisma 6.19.x Client
+  behavior remain authoritative for the app.
+- The vendored `@prisma-next/*` tarballs were packed from
+  `~/work/prisma/prisma-next-clean` at commit
+  `ece4e185cbc1033ae837b5567079f08d364621c7`.
+- `packages/prisma/schema/contract.prisma` is the Prisma Next PSL contract.
+  `contract.json` and `contract.d.ts` are emitted and committed next to it.
+- Prisma Next cannot express Prisma `relationMode = "prisma"` yet, so
+  generated validation DDL includes foreign keys that the Prisma 6 schema does
+  not create. These foreign keys and their derived helper indexes are
+  classified as expected DDL differences.
+- Prisma Next PSL does not preserve index sort direction today. Indexes that
+  differ only by `sort: Asc` or `sort: Desc` are classified as expected DDL
+  differences.
+- Prisma Next currently requires a single-field `@id` on SQL models and does
+  not support Dub's Prisma 6 no-id tables. The Next contract adds synthetic
+  `id` fields to those validation-only models while preserving their original
+  unique constraints.
+- `next:emit` runs a post-emit normalizer for current Prisma Next JSON
+  artifacts where `false` literal defaults and native JSON named-type
+  parameters are accepted by the emitter but rejected by runtime validation.
+- Prisma Next accepts `@db.Timestamp(0)` during contract emission but rejects
+  precision `0` while applying DDL. The Next contract uses unparameterized
+  PostgreSQL `timestamp` for those validation-only fields.
+- Prisma Next DDL is validation-only in this phase. It is not the
+  authoritative migration source for Dub.
+- `@updatedAt` is intentionally part of the Prisma Next contract. It is
+  validated as an application-side create/update mutation default and is not
+  tracked as a workaround.
