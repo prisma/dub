@@ -14,6 +14,9 @@ Current modules:
   `domain/key` with webhook ids.
 - `analytics-runtime-module`: all-time link analytics aggregates for the raw
   shortcut in `getAnalytics`.
+- `commissions-payouts-runtime-module`: commissions and payouts reads,
+  aggregates, grouped aggregates, relation filters, includes, and update-count
+  writes.
 - `usage-counter-runtime-module`: link, workspace, and program-enrollment
   usage counter reads and writes.
 - `workspace-product-runtime-module`: workspace product resolution from
@@ -57,6 +60,14 @@ Tracked write-query differences:
   writes `updatedAt`; the Prisma Next high-level fallback currently reads the
   current value first, writes the computed scalar value, and leaves `updatedAt`
   unchanged.
+- Multi-row count writes have different orchestration. For example,
+  `commissions.update.mark-paid-count` captures Prisma 6 as
+  `BEGIN` + matching-row `SELECT` + `UPDATE ... updatedAt = $n` + `COMMIT`,
+  while Prisma Next `updateCount` captures a matching-row `SELECT` followed by
+  `UPDATE` without an automatic `updatedAt` assignment.
+- Scalar update writes such as `payouts.update.pending-amount` keep matching
+  result shapes, but Prisma 6 advances `updatedAt` and Prisma Next currently
+  leaves it unchanged unless the application passes an explicit value.
 
 ## Runtime Capture
 
@@ -68,10 +79,12 @@ The comparison is collected inside the two runtimes, not inferred from server
 logs. That keeps it tied to the exact SQL, encoded parameters, and JavaScript
 result values observed by the application boundary under test.
 
-- Prisma 6 capture happens at the `pg.Pool.query` boundary used by
-  `@prisma/adapter-pg`. This records the SQL and the parameter values after
-  Prisma 6 has mapped them for the driver. Prisma Client query events are also
-  stored as sidecar metadata.
+- Prisma 6 capture happens at the `pg` pool/client query boundary used by
+  `@prisma/adapter-pg`. The collector wraps pool-level calls and acquired
+  clients, so transactional update/delete paths are captured along with normal
+  reads. This records the SQL and the parameter values after Prisma 6 has
+  mapped them for the driver. Prisma Client query events are also stored as
+  sidecar metadata.
 - Prisma Next capture happens in runtime middleware before driver execution.
   This records the lowered SQL plan, encoded parameters, and plan metadata
   emitted by the high-level `db.orm` API.

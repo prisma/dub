@@ -32,7 +32,12 @@ const fixtureValues = {
   linkId: "link_runtime_sql",
   folderId: "fold_runtime_sql",
   customerId: "customer_runtime_sql",
+  commissionId: "commission_runtime_sql",
+  commissionProcessedId: "commission_processed_runtime_sql",
+  invoiceId: "invoice_runtime_sql",
   partnerId: "partner_runtime_sql",
+  payoutId: "payout_runtime_sql",
+  payoutPendingId: "payout_pending_runtime_sql",
   programEnrollmentId: "program_enrollment_runtime_sql",
   partnerGroupId: "partner_group_runtime_sql",
   programWorkspaceId: "proj_runtime_sql_program",
@@ -288,30 +293,57 @@ class QueryCollector {
   }
 }
 
+const capturedClientSymbol = Symbol("dub.runtimeSqlCapturedClient");
+
+function extractQueryInput(queryConfig, values) {
+  const sql =
+    typeof queryConfig === "string"
+      ? queryConfig
+      : typeof queryConfig?.text === "string"
+        ? queryConfig.text
+        : null;
+  const params = Array.isArray(values)
+    ? values
+    : Array.isArray(queryConfig?.values)
+      ? queryConfig.values
+      : [];
+
+  return { sql, params };
+}
+
 class CapturingPool extends Pool {
   constructor(config, collector) {
     super(config);
     this.collector = collector;
   }
 
-  query(queryConfig, values, callback) {
-    const sql =
-      typeof queryConfig === "string"
-        ? queryConfig
-        : typeof queryConfig?.text === "string"
-          ? queryConfig.text
-          : null;
-    const params = Array.isArray(values)
-      ? values
-      : Array.isArray(queryConfig?.values)
-        ? queryConfig.values
-        : [];
+  connect(callback) {
+    const wrapClient = (client) => {
+      if (!client || client[capturedClientSymbol]) {
+        return client;
+      }
 
-    if (sql) {
-      this.collector.record({ sql, params });
+      const originalQuery = client.query.bind(client);
+      client.query = (queryConfig, values, queryCallback) => {
+        const { sql, params } = extractQueryInput(queryConfig, values);
+        if (sql) {
+          this.collector.record({ sql, params });
+        }
+        return originalQuery(queryConfig, values, queryCallback);
+      };
+      Object.defineProperty(client, capturedClientSymbol, {
+        value: true,
+      });
+      return client;
+    };
+
+    if (typeof callback === "function") {
+      return super.connect((error, client, done) => {
+        callback(error, wrapClient(client), done);
+      });
     }
 
-    return super.query(queryConfig, values, callback);
+    return super.connect().then(wrapClient);
   }
 }
 
@@ -676,6 +708,152 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create type "CommissionStatus" as enum (
+      'pending',
+      'processed',
+      'paid',
+      'refunded',
+      'duplicate',
+      'fraud',
+      'canceled'
+    )
+  `);
+  await pool.query(`
+    create type "CommissionType" as enum (
+      'click',
+      'lead',
+      'sale',
+      'custom'
+    )
+  `);
+  await pool.query(`
+    create type "PayoutStatus" as enum (
+      'pending',
+      'processing',
+      'processed',
+      'sent',
+      'completed',
+      'failed',
+      'canceled'
+    )
+  `);
+  await pool.query(`
+    create type "PayoutMode" as enum (
+      'internal',
+      'external'
+    )
+  `);
+  await pool.query(`
+    create type "PartnerPayoutMethod" as enum (
+      'connect',
+      'stablecoin',
+      'paypal'
+    )
+  `);
+  await pool.query(`
+    create type "InvoiceStatus" as enum (
+      'processing',
+      'completed',
+      'failed'
+    )
+  `);
+  await pool.query(`
+    create type "InvoiceType" as enum (
+      'partnerPayout',
+      'domainRenewal'
+    )
+  `);
+  await pool.query(`
+    create type "ProgramPayoutMode" as enum (
+      'internal',
+      'hybrid',
+      'external'
+    )
+  `);
+  await pool.query(`
+    create type "PaymentMethod" as enum (
+      'card',
+      'ach',
+      'ach_fast',
+      'sepa',
+      'acss'
+    )
+  `);
+  await pool.query(`
+    create table "Invoice" (
+      "id" text primary key,
+      "programId" text,
+      "workspaceId" text not null,
+      "number" text unique,
+      "status" "InvoiceStatus" not null default 'processing',
+      "type" "InvoiceType" not null default 'partnerPayout',
+      "payoutMode" "ProgramPayoutMode" not null default 'internal',
+      "paymentMethod" "PaymentMethod",
+      "amount" integer not null default 0,
+      "fee" integer not null default 0,
+      "total" integer not null default 0,
+      "externalAmount" integer not null default 0,
+      "receiptUrl" text,
+      "failedReason" text,
+      "registeredDomains" jsonb,
+      "stripeChargeMetadata" jsonb,
+      "failedAttempts" integer not null default 0,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "paidAt" timestamp(3)
+    )
+  `);
+  await pool.query(`
+    create table "Payout" (
+      "id" text primary key,
+      "programId" text not null,
+      "partnerId" text not null,
+      "invoiceId" text,
+      "amount" integer not null default 0,
+      "currency" text not null default 'USD',
+      "status" "PayoutStatus" not null default 'pending',
+      "mode" "PayoutMode",
+      "method" "PartnerPayoutMethod",
+      "description" text,
+      "periodStart" timestamp(3),
+      "periodEnd" timestamp(3),
+      "paypalTransferId" text unique,
+      "stripeTransferId" text,
+      "stripePayoutId" text,
+      "stripePayoutTraceId" text,
+      "failureReason" text,
+      "webhookEventId" text unique,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "userId" text,
+      "initiatedAt" timestamp(3),
+      "paidAt" timestamp(3)
+    )
+  `);
+  await pool.query(`
+    create table "Commission" (
+      "id" text primary key,
+      "programId" text not null,
+      "partnerId" text not null,
+      "rewardId" text,
+      "linkId" text,
+      "payoutId" text,
+      "invoiceId" text,
+      "customerId" text,
+      "eventId" text unique,
+      "description" text,
+      "type" "CommissionType" not null,
+      "amount" integer not null,
+      "quantity" integer not null,
+      "earnings" integer not null default 0,
+      "currency" text not null default 'usd',
+      "status" "CommissionStatus" not null default 'pending',
+      "userId" text,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("invoiceId", "programId")
+    )
+  `);
+  await pool.query(`
     create table "Customer" (
       "id" text primary key,
       "name" text,
@@ -718,7 +896,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -837,6 +1015,109 @@ async function resetRuntimeFixture(pool, options = {}) {
       "1200",
       new Date("2024-01-04T05:00:00.000Z"),
       new Date("2024-01-04T05:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Invoice" ("id", "programId", "workspaceId", "number", "status", "type", "payoutMode", "paymentMethod", "amount", "fee", "total", "externalAmount", "createdAt", "paidAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
+    [
+      fixtureValues.invoiceId,
+      fixtureValues.programId,
+      fixtureValues.programWorkspaceId,
+      "INV-RUNTIME-SQL",
+      "completed",
+      "partnerPayout",
+      "internal",
+      "card",
+      1200,
+      120,
+      1320,
+      0,
+      new Date("2024-01-12T00:00:00.000Z"),
+      new Date("2024-01-12T01:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Payout" ("id", "programId", "partnerId", "invoiceId", "amount", "currency", "status", "mode", "method", "description", "periodStart", "periodEnd", "createdAt", "updatedAt", "paidAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
+    [
+      fixtureValues.payoutId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.invoiceId,
+      1200,
+      "USD",
+      "processed",
+      "internal",
+      "paypal",
+      "Runtime SQL processed payout",
+      new Date("2024-01-01T00:00:00.000Z"),
+      new Date("2024-01-31T23:59:59.000Z"),
+      new Date("2024-01-12T02:00:00.000Z"),
+      new Date("2024-01-12T02:00:00.000Z"),
+      new Date("2024-01-12T03:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Payout" ("id", "programId", "partnerId", "invoiceId", "amount", "currency", "status", "mode", "method", "description", "periodStart", "periodEnd", "createdAt", "updatedAt", "paidAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
+    [
+      fixtureValues.payoutPendingId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      null,
+      500,
+      "USD",
+      "pending",
+      "internal",
+      "paypal",
+      "Runtime SQL pending payout",
+      new Date("2024-02-01T00:00:00.000Z"),
+      new Date("2024-02-29T23:59:59.000Z"),
+      new Date("2024-02-01T02:00:00.000Z"),
+      new Date("2024-02-01T02:00:00.000Z"),
+      null,
+    ],
+  );
+  await pool.query(
+    'insert into "Commission" ("id", "programId", "partnerId", "linkId", "payoutId", "invoiceId", "customerId", "eventId", "description", "type", "amount", "quantity", "earnings", "currency", "status", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
+    [
+      fixtureValues.commissionId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.linkId,
+      fixtureValues.payoutPendingId,
+      "sale_event_runtime_sql",
+      fixtureValues.customerId,
+      "event_runtime_sql",
+      "Runtime SQL pending commission",
+      "sale",
+      5000,
+      1,
+      500,
+      "usd",
+      "pending",
+      new Date("2024-01-13T00:00:00.000Z"),
+      new Date("2024-01-13T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Commission" ("id", "programId", "partnerId", "linkId", "payoutId", "invoiceId", "customerId", "eventId", "description", "type", "amount", "quantity", "earnings", "currency", "status", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
+    [
+      fixtureValues.commissionProcessedId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.linkId,
+      fixtureValues.payoutId,
+      fixtureValues.invoiceId,
+      fixtureValues.customerId,
+      "event_processed_runtime_sql",
+      "Runtime SQL processed commission",
+      "sale",
+      12000,
+      1,
+      1200,
+      "usd",
+      "processed",
+      new Date("2024-01-14T00:00:00.000Z"),
+      new Date("2024-01-14T00:00:00.000Z"),
     ],
   );
   await pool.query(
@@ -1075,6 +1356,9 @@ async function snapshotRuntimeFixture(pool) {
     partnerGroups,
     partners,
     programEnrollments,
+    invoices,
+    payouts,
+    commissions,
     customers,
     folders,
     folderUsers,
@@ -1096,6 +1380,9 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "PartnerGroup" order by "id"'),
     pool.query('select * from "Partner" order by "id"'),
     pool.query('select * from "ProgramEnrollment" order by "id"'),
+    pool.query('select * from "Invoice" order by "id"'),
+    pool.query('select * from "Payout" order by "id"'),
+    pool.query('select * from "Commission" order by "id"'),
     pool.query('select * from "Customer" order by "id"'),
     pool.query('select * from "Folder" order by "id"'),
     pool.query('select * from "FolderUser" order by "id"'),
@@ -1119,6 +1406,9 @@ async function snapshotRuntimeFixture(pool) {
     PartnerGroup: partnerGroups.rows,
     Partner: partners.rows,
     ProgramEnrollment: programEnrollments.rows,
+    Invoice: invoices.rows,
+    Payout: payouts.rows,
+    Commission: commissions.rows,
     Customer: customers.rows,
     Folder: folders.rows,
     FolderUser: folderUsers.rows,
@@ -1547,6 +1837,247 @@ const analyticsModule = {
           sales: aggregate.sum("sales"),
           saleAmount: aggregate.sum("saleAmount"),
         })),
+    },
+  ],
+};
+
+const commissionsPayoutsModule = {
+  id: "commissions-payouts-runtime-module",
+  description:
+    "Module-sized comparison for commissions and payouts reads, aggregates, grouped aggregates, and write counts.",
+  operations: [
+    {
+      id: "commissions.read.program-active-commissions",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.commission.findMany({
+          where: {
+            programId: fixtureValues.programId,
+            status: {
+              in: ["pending", "processed"],
+            },
+          },
+          select: {
+            id: true,
+            programId: true,
+            partnerId: true,
+            payoutId: true,
+            amount: true,
+            earnings: true,
+            status: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Commission.where((commission) =>
+          and(
+            commission.programId.eq(fixtureValues.programId),
+            commission.status.in(["pending", "processed"]),
+          ),
+        )
+          .select(
+            "id",
+            "programId",
+            "partnerId",
+            "payoutId",
+            "amount",
+            "earnings",
+            "status",
+            "createdAt",
+          )
+          .orderBy((commission) => commission.createdAt.asc())
+          .all(),
+    },
+    {
+      id: "commissions.aggregate.earnings-by-payout",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const rows = await prisma.commission.groupBy({
+          by: ["payoutId"],
+          where: {
+            payoutId: {
+              not: null,
+            },
+          },
+          _sum: {
+            earnings: true,
+          },
+          orderBy: {
+            payoutId: "asc",
+          },
+        });
+        return rows.map((row) => ({
+          payoutId: row.payoutId,
+          earnings: row._sum.earnings,
+        }));
+      },
+      prismaNext: async ({ db }) => {
+        const rows = await db.orm.Commission.where((commission) =>
+          commission.payoutId.isNotNull(),
+        )
+          .groupBy("payoutId")
+          .aggregate((aggregate) => ({
+            earnings: aggregate.sum("earnings"),
+          }));
+        return rows
+          .map((row) => ({
+            payoutId: row.payoutId,
+            earnings: row.earnings,
+          }))
+          .sort((left, right) => left.payoutId.localeCompare(right.payoutId));
+      },
+    },
+    {
+      id: "commissions.update.mark-paid-count",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.commission.updateMany({
+          where: {
+            id: {
+              in: [fixtureValues.commissionId],
+            },
+          },
+          data: {
+            payoutId: null,
+            status: "paid",
+          },
+        }),
+      prismaNext: async ({ db }) => ({
+        count: await db.orm.Commission.where((commission) =>
+          commission.id.in([fixtureValues.commissionId]),
+        ).updateCount({
+          payoutId: null,
+          status: "paid",
+        }),
+      }),
+    },
+    {
+      id: "payouts.aggregate.processed-with-enabled-partner",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const totals = await prisma.payout.aggregate({
+          where: {
+            status: "processed",
+            amount: {
+              gte: 1000,
+            },
+            partner: {
+              payoutsEnabledAt: {
+                not: null,
+              },
+            },
+          },
+          _count: {
+            id: true,
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+        return {
+          count: totals._count.id,
+          amount: totals._sum.amount ?? 0,
+        };
+      },
+      prismaNext: ({ db }) =>
+        db.orm.Payout.where((payout) =>
+          and(
+            payout.status.eq("processed"),
+            payout.amount.gte(1000),
+            payout.partner.some((partner) =>
+              partner.payoutsEnabledAt.isNotNull(),
+            ),
+          ),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+          amount: aggregate.sum("amount"),
+        })),
+    },
+    {
+      id: "payouts.read.processed-with-partner-email",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.payout.findMany({
+          where: {
+            status: "processed",
+            amount: {
+              gte: 1000,
+            },
+            partner: {
+              payoutsEnabledAt: {
+                not: null,
+              },
+            },
+          },
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+            partner: {
+              select: {
+                email: true,
+              },
+            },
+          },
+          take: 100,
+          orderBy: {
+            paidAt: "asc",
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Payout.where((payout) =>
+          and(
+            payout.status.eq("processed"),
+            payout.amount.gte(1000),
+            payout.partner.some((partner) =>
+              partner.payoutsEnabledAt.isNotNull(),
+            ),
+          ),
+        )
+          .select("id", "amount", "paidAt")
+          .include("partner", (partner) => partner.select("email"))
+          .take(100)
+          .orderBy((payout) => payout.paidAt.asc())
+          .all(),
+    },
+    {
+      id: "payouts.update.pending-amount",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.payout.update({
+          where: {
+            id: fixtureValues.payoutPendingId,
+          },
+          data: {
+            amount: 700,
+          },
+          select: {
+            id: true,
+            amount: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Payout.where({ id: fixtureValues.payoutPendingId })
+          .select("id", "amount", "updatedAt")
+          .update({
+            amount: 700,
+          }),
     },
   ],
 };
@@ -2943,6 +3474,7 @@ const runtimeModules = [
   linkModule,
   edgeLinkModule,
   analyticsModule,
+  commissionsPayoutsModule,
   usageCounterModule,
   workspaceProductModule,
   workspaceModule,
