@@ -26,6 +26,10 @@ const dashboardIds = {
 };
 
 const fixtureValues = {
+  bountyId: "bounty_runtime_sql",
+  bountyGroupId: "bounty_group_runtime_sql",
+  bountySubmissionId: "bounty_submission_runtime_sql",
+  bountySubmissionSecondId: "bounty_submission_second_runtime_sql",
   domainId: "domain_runtime_sql",
   integrationId: "integration_runtime_sql",
   installedIntegrationId: "installed_integration_runtime_sql",
@@ -59,6 +63,7 @@ const fixtureValues = {
   tagCreateId: "tag_runtime_sql_create",
   userId: "user_runtime_sql",
   webhookId: "webhook_runtime_sql",
+  workflowId: "workflow_runtime_sql",
 };
 
 const edgeLinkScalarFields = [
@@ -912,6 +917,121 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create type "WorkflowTrigger" as enum (
+      'partnerEnrolled',
+      'partnerMetricsUpdated',
+      'clickRecorded',
+      'commissionEarned',
+      'leadRecorded',
+      'saleRecorded'
+    )
+  `);
+  await pool.query(`
+    create table "Workflow" (
+      "id" text primary key,
+      "programId" text not null,
+      "name" text,
+      "trigger" "WorkflowTrigger" not null,
+      "triggerConditions" jsonb not null,
+      "actions" jsonb not null,
+      "disabledAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create type "BountyType" as enum (
+      'performance',
+      'submission'
+    )
+  `);
+  await pool.query(`
+    create type "BountyPerformanceScope" as enum (
+      'new',
+      'lifetime'
+    )
+  `);
+  await pool.query(`
+    create type "BountySubmissionStatus" as enum (
+      'draft',
+      'submitted',
+      'approved',
+      'rejected'
+    )
+  `);
+  await pool.query(`
+    create type "BountySubmissionRejectionReason" as enum (
+      'invalidProof',
+      'duplicateSubmission',
+      'outOfTimeWindow',
+      'didNotMeetCriteria',
+      'other'
+    )
+  `);
+  await pool.query(`
+    create type "BountySubmissionFrequency" as enum (
+      'day',
+      'week',
+      'month'
+    )
+  `);
+  await pool.query(`
+    create table "Bounty" (
+      "id" text primary key,
+      "programId" text not null,
+      "workflowId" text unique,
+      "name" text not null,
+      "description" text,
+      "type" "BountyType" not null,
+      "startsAt" timestamp(3) not null,
+      "endsAt" timestamp(3),
+      "submissionsOpenAt" timestamp(3),
+      "submissionFrequency" "BountySubmissionFrequency",
+      "maxSubmissions" integer not null default 1,
+      "rewardAmount" integer,
+      "rewardDescription" text,
+      "performanceScope" "BountyPerformanceScope",
+      "submissionRequirements" jsonb,
+      "socialMetricsLastSyncedAt" timestamp(3),
+      "archivedAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create table "BountyGroup" (
+      "id" text primary key,
+      "bountyId" text not null,
+      "groupId" text not null,
+      unique ("bountyId", "groupId")
+    )
+  `);
+  await pool.query(`
+    create table "BountySubmission" (
+      "id" text primary key,
+      "programId" text not null,
+      "partnerId" text not null,
+      "bountyId" text not null,
+      "performanceCount" bigint,
+      "socialMetricCount" integer,
+      "commissionId" text unique,
+      "userId" text,
+      "description" text,
+      "status" "BountySubmissionStatus" not null default 'draft',
+      "rejectionReason" "BountySubmissionRejectionReason",
+      "rejectionNote" text,
+      "files" jsonb,
+      "urls" jsonb,
+      "periodNumber" integer not null default 1,
+      "socialMetricsLastSyncedAt" timestamp(3),
+      "completedAt" timestamp(3),
+      "reviewedAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("bountyId", "partnerId", "periodNumber")
+    )
+  `);
+  await pool.query(`
     create type "NotificationEmailType" as enum (
       'Message',
       'Bounty',
@@ -998,7 +1118,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "ProgramApplicationEvent", "ProgramApplication", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "BountySubmission", "BountyGroup", "Bounty", "Workflow", "ProgramApplicationEvent", "ProgramApplication", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -1271,6 +1391,94 @@ async function resetRuntimeFixture(pool, options = {}) {
       JSON.stringify({ path: "/programs/runtime-sql-program?ref=direct" }),
       null,
       null,
+    ],
+  );
+  await pool.query(
+    'insert into "Workflow" ("id", "programId", "name", "trigger", "triggerConditions", "actions", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    [
+      fixtureValues.workflowId,
+      fixtureValues.programId,
+      "Runtime SQL Workflow",
+      "partnerMetricsUpdated",
+      JSON.stringify([{ field: "totalSales", operator: "gte", value: 10 }]),
+      JSON.stringify([{ type: "sendReward" }]),
+      new Date("2024-01-18T00:00:00.000Z"),
+      new Date("2024-01-18T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Bounty" ("id", "programId", "workflowId", "name", "description", "type", "startsAt", "endsAt", "submissionsOpenAt", "submissionFrequency", "maxSubmissions", "rewardAmount", "rewardDescription", "performanceScope", "submissionRequirements", "socialMetricsLastSyncedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)',
+    [
+      fixtureValues.bountyId,
+      fixtureValues.programId,
+      fixtureValues.workflowId,
+      "Runtime SQL Bounty",
+      "Bounty used by runtime SQL comparisons",
+      "submission",
+      new Date("2024-01-18T01:00:00.000Z"),
+      new Date("2024-02-18T01:00:00.000Z"),
+      new Date("2024-01-18T01:30:00.000Z"),
+      "week",
+      2,
+      2500,
+      "Submit a runtime SQL proof",
+      "new",
+      JSON.stringify([{ type: "text", label: "Proof" }]),
+      new Date("2024-01-18T02:00:00.000Z"),
+      new Date("2024-01-18T01:00:00.000Z"),
+      new Date("2024-01-18T01:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "BountyGroup" ("id", "bountyId", "groupId") values ($1, $2, $3)',
+    [
+      fixtureValues.bountyGroupId,
+      fixtureValues.bountyId,
+      fixtureValues.partnerGroupId,
+    ],
+  );
+  await pool.query(
+    'insert into "BountySubmission" ("id", "programId", "partnerId", "bountyId", "performanceCount", "socialMetricCount", "commissionId", "userId", "description", "status", "files", "urls", "periodNumber", "completedAt", "reviewedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
+    [
+      fixtureValues.bountySubmissionId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.bountyId,
+      "42",
+      7,
+      null,
+      null,
+      "Runtime SQL submitted bounty proof",
+      "submitted",
+      JSON.stringify([{ name: "proof.png" }]),
+      JSON.stringify(["https://example.com/proof"]),
+      1,
+      new Date("2024-01-18T03:00:00.000Z"),
+      null,
+      new Date("2024-01-18T03:00:00.000Z"),
+      new Date("2024-01-18T03:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "BountySubmission" ("id", "programId", "partnerId", "bountyId", "performanceCount", "socialMetricCount", "commissionId", "userId", "description", "status", "files", "urls", "periodNumber", "completedAt", "reviewedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
+    [
+      fixtureValues.bountySubmissionSecondId,
+      fixtureValues.programId,
+      fixtureValues.partnerId,
+      fixtureValues.bountyId,
+      "84",
+      11,
+      fixtureValues.commissionProcessedId,
+      fixtureValues.userId,
+      "Runtime SQL approved bounty proof",
+      "approved",
+      JSON.stringify([{ name: "approved.png" }]),
+      JSON.stringify(["https://example.com/approved"]),
+      2,
+      new Date("2024-01-19T03:00:00.000Z"),
+      new Date("2024-01-19T04:00:00.000Z"),
+      new Date("2024-01-19T03:00:00.000Z"),
+      new Date("2024-01-19T04:00:00.000Z"),
     ],
   );
   await pool.query(
@@ -1576,6 +1784,10 @@ async function snapshotRuntimeFixture(pool) {
     commissions,
     programApplications,
     programApplicationEvents,
+    workflows,
+    bounties,
+    bountyGroups,
+    bountySubmissions,
     notificationEmails,
     postbacks,
     customers,
@@ -1604,6 +1816,10 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Commission" order by "id"'),
     pool.query('select * from "ProgramApplication" order by "id"'),
     pool.query('select * from "ProgramApplicationEvent" order by "id"'),
+    pool.query('select * from "Workflow" order by "id"'),
+    pool.query('select * from "Bounty" order by "id"'),
+    pool.query('select * from "BountyGroup" order by "id"'),
+    pool.query('select * from "BountySubmission" order by "id"'),
     pool.query('select * from "NotificationEmail" order by "id"'),
     pool.query('select * from "Postback" order by "id"'),
     pool.query('select * from "Customer" order by "id"'),
@@ -1634,6 +1850,10 @@ async function snapshotRuntimeFixture(pool) {
     Commission: commissions.rows,
     ProgramApplication: programApplications.rows,
     ProgramApplicationEvent: programApplicationEvents.rows,
+    Workflow: workflows.rows,
+    Bounty: bounties.rows,
+    BountyGroup: bountyGroups.rows,
+    BountySubmission: bountySubmissions.rows,
     NotificationEmail: notificationEmails.rows,
     Postback: postbacks.rows,
     Customer: customers.rows,
@@ -3915,6 +4135,199 @@ const programApplicationModule = {
   ],
 };
 
+const bountyModule = {
+  id: "bounty-runtime-module",
+  description:
+    "Module-sized comparison for bounty details, grouped submission counts, and review writes.",
+  operations: [
+    {
+      id: "bounty.read.details-with-groups",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const [bounty] = await prisma.$queryRaw`
+          SELECT
+            b.id,
+            b.name,
+            b.description,
+            b.type,
+            b."startsAt",
+            b."endsAt",
+            b."submissionsOpenAt",
+            b."submissionFrequency",
+            b."maxSubmissions",
+            b."rewardAmount",
+            b."rewardDescription",
+            b."submissionRequirements",
+            b."socialMetricsLastSyncedAt",
+            b."performanceScope",
+            wf."triggerConditions",
+            COALESCE(
+              (
+                SELECT jsonb_agg(
+                  jsonb_build_object('id', "groupId")
+                )
+                FROM "BountyGroup"
+                WHERE "bountyId" = b.id
+              ),
+              '[]'::jsonb
+            ) AS "groups"
+          FROM "Bounty" b
+          LEFT JOIN "Workflow" wf ON wf.id = b."workflowId"
+          WHERE b.id = ${fixtureValues.bountyId}
+            AND b."programId" = ${fixtureValues.programId}
+          LIMIT 1
+        `;
+
+        return {
+          id: bounty.id,
+          name: bounty.name,
+          description: bounty.description,
+          type: bounty.type,
+          startsAt: bounty.startsAt,
+          endsAt: bounty.endsAt,
+          submissionsOpenAt: bounty.submissionsOpenAt,
+          submissionFrequency: bounty.submissionFrequency,
+          maxSubmissions: bounty.maxSubmissions,
+          rewardAmount: bounty.rewardAmount,
+          rewardDescription: bounty.rewardDescription,
+          submissionRequirements: bounty.submissionRequirements,
+          socialMetricsLastSyncedAt: bounty.socialMetricsLastSyncedAt ?? null,
+          performanceScope: bounty.performanceScope,
+          performanceCondition:
+            bounty.triggerConditions?.length > 0
+              ? bounty.triggerConditions[0]
+              : null,
+          groups: (bounty.groups ?? []).filter((group) => group !== null),
+        };
+      },
+      prismaNext: async ({ db }) => {
+        const bounty = await db.orm.Bounty.where({
+          id: fixtureValues.bountyId,
+          programId: fixtureValues.programId,
+        })
+          .select(
+            "id",
+            "name",
+            "description",
+            "type",
+            "startsAt",
+            "endsAt",
+            "submissionsOpenAt",
+            "submissionFrequency",
+            "maxSubmissions",
+            "rewardAmount",
+            "rewardDescription",
+            "submissionRequirements",
+            "socialMetricsLastSyncedAt",
+            "performanceScope",
+          )
+          .include("workflow", (workflow) =>
+            workflow.select("triggerConditions"),
+          )
+          .include("groups", (groups) => groups.select("groupId"))
+          .first();
+
+        return {
+          id: bounty.id,
+          name: bounty.name,
+          description: bounty.description,
+          type: bounty.type,
+          startsAt: bounty.startsAt,
+          endsAt: bounty.endsAt,
+          submissionsOpenAt: bounty.submissionsOpenAt,
+          submissionFrequency: bounty.submissionFrequency,
+          maxSubmissions: bounty.maxSubmissions,
+          rewardAmount: bounty.rewardAmount,
+          rewardDescription: bounty.rewardDescription,
+          submissionRequirements: bounty.submissionRequirements,
+          socialMetricsLastSyncedAt: bounty.socialMetricsLastSyncedAt ?? null,
+          performanceScope: bounty.performanceScope,
+          performanceCondition:
+            bounty.workflow?.triggerConditions?.length > 0
+              ? bounty.workflow.triggerConditions[0]
+              : null,
+          groups: bounty.groups.map((group) => ({ id: group.groupId })),
+        };
+      },
+    },
+    {
+      id: "bounty-submission.aggregate.by-status",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const rows = await prisma.bountySubmission.groupBy({
+          by: ["status"],
+          where: {
+            bountyId: fixtureValues.bountyId,
+          },
+          _count: {
+            id: true,
+          },
+          orderBy: {
+            status: "asc",
+          },
+        });
+        return rows.map((row) => ({
+          status: row.status,
+          count: row._count.id,
+        }));
+      },
+      prismaNext: async ({ db }) => {
+        const rows = await db.orm.BountySubmission.where({
+          bountyId: fixtureValues.bountyId,
+        })
+          .groupBy("status")
+          .aggregate((aggregate) => ({
+            count: aggregate.count(),
+          }));
+        return rows
+          .map((row) => ({
+            status: row.status,
+            count: row.count,
+          }))
+          .sort((left, right) => left.status.localeCompare(right.status));
+      },
+    },
+    {
+      id: "bounty-submission.update.approve",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.bountySubmission.update({
+          where: {
+            id: fixtureValues.bountySubmissionId,
+          },
+          data: {
+            status: "approved",
+            userId: fixtureValues.userId,
+            reviewedAt: new Date("2024-01-18T04:00:00.000Z"),
+          },
+          select: {
+            id: true,
+            status: true,
+            userId: true,
+            reviewedAt: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.BountySubmission.where({
+          id: fixtureValues.bountySubmissionId,
+        })
+          .select("id", "status", "userId", "reviewedAt", "updatedAt")
+          .update({
+            status: "approved",
+            userId: fixtureValues.userId,
+            reviewedAt: new Date("2024-01-18T04:00:00.000Z"),
+          }),
+    },
+  ],
+};
+
 const partnerModule = {
   id: "partner-runtime-module",
   description: "Module-sized comparison for partner profile reads.",
@@ -4160,6 +4573,7 @@ const runtimeModules = [
   programModule,
   programNetworkModule,
   programApplicationModule,
+  bountyModule,
   partnerModule,
   programEnrollmentModule,
   customerModule,

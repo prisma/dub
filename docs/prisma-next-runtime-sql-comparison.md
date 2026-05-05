@@ -45,6 +45,8 @@ Current modules:
   through `Program`/`PartnerGroup` relation filters.
 - `program-application-runtime-module`: program application reads/review
   writes plus application event funnel counts and relation includes.
+- `bounty-runtime-module`: bounty details, grouped submission counts, and
+  review writes.
 - `partner-runtime-module`: partner profile reads and update writes.
 - `program-enrollment-runtime-module`: program enrollment compound-key reads
   and partner includes.
@@ -90,6 +92,9 @@ Tracked write-query differences:
 - `program-application-event.aggregate.funnel-summary` maps one Prisma 6 raw
   SQL query with multiple `COUNT(column)` metrics into five Prisma Next
   high-level count aggregates, one for each funnel step.
+- `bounty.read.details-with-groups` maps a Prisma 6 raw SQL query with a
+  lateral-style JSON aggregate into Prisma Next high-level relation includes
+  over `Workflow` and `BountyGroup`.
 
 ## Runtime Capture
 
