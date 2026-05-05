@@ -43,6 +43,8 @@ Current modules:
 - `program-runtime-module`: basic program fetcher reads.
 - `program-network-runtime-module`: marketplace program availability counting
   through `Program`/`PartnerGroup` relation filters.
+- `program-application-runtime-module`: program application reads/review
+  writes plus application event funnel counts and relation includes.
 - `partner-runtime-module`: partner profile reads and update writes.
 - `program-enrollment-runtime-module`: program enrollment compound-key reads
   and partner includes.
@@ -85,6 +87,9 @@ Tracked write-query differences:
   `array_contains` predicate as the baseline. The current Prisma Next
   high-level ORM path fetches enabled partner postbacks and applies the JSON
   trigger membership check in JavaScript.
+- `program-application-event.aggregate.funnel-summary` maps one Prisma 6 raw
+  SQL query with multiple `COUNT(column)` metrics into five Prisma Next
+  high-level count aggregates, one for each funnel step.
 
 ## Runtime Capture
 

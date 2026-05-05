@@ -43,6 +43,10 @@ const fixtureValues = {
   postbackDisabledId: "postback_disabled_runtime_sql",
   payoutId: "payout_runtime_sql",
   payoutPendingId: "payout_pending_runtime_sql",
+  programApplicationId: "program_application_runtime_sql",
+  programApplicationEventId: "program_application_event_runtime_sql",
+  programApplicationEventSecondId:
+    "program_application_event_second_runtime_sql",
   programEnrollmentId: "program_enrollment_runtime_sql",
   partnerGroupId: "partner_group_runtime_sql",
   programWorkspaceId: "proj_runtime_sql_program",
@@ -859,6 +863,55 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create type "ProgramApplicationRejectionReason" as enum (
+      'needsMoreDetail',
+      'doesNotMeetRequirements',
+      'notTheRightFit',
+      'other'
+    )
+  `);
+  await pool.query(`
+    create table "ProgramApplication" (
+      "id" text primary key,
+      "programId" text not null,
+      "groupId" text,
+      "name" text not null,
+      "email" text not null,
+      "country" text,
+      "website" text,
+      "youtube" text,
+      "twitter" text,
+      "linkedin" text,
+      "instagram" text,
+      "tiktok" text,
+      "formData" jsonb,
+      "userId" text,
+      "rejectionReason" "ProgramApplicationRejectionReason",
+      "rejectionNote" text,
+      "reviewedAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
+    create table "ProgramApplicationEvent" (
+      "id" text primary key,
+      "programId" text not null,
+      "visitedAt" timestamp(3) not null default current_timestamp,
+      "startedAt" timestamp(3),
+      "submittedAt" timestamp(3),
+      "approvedAt" timestamp(3),
+      "rejectedAt" timestamp(3),
+      "country" text,
+      "referralSource" text not null,
+      "referredByPartnerId" text,
+      "metadata" jsonb,
+      "programApplicationId" text,
+      "partnerId" text,
+      unique ("programId", "partnerId")
+    )
+  `);
+  await pool.query(`
     create type "NotificationEmailType" as enum (
       'Message',
       'Bounty',
@@ -945,7 +998,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "ProgramApplicationEvent", "ProgramApplication", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -1167,6 +1220,57 @@ async function resetRuntimeFixture(pool, options = {}) {
       "processed",
       new Date("2024-01-14T00:00:00.000Z"),
       new Date("2024-01-14T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "ProgramApplication" ("id", "programId", "groupId", "name", "email", "country", "website", "formData", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [
+      fixtureValues.programApplicationId,
+      fixtureValues.programId,
+      fixtureValues.partnerGroupId,
+      "Runtime SQL Applicant",
+      "applicant@example.com",
+      "US",
+      "https://example.com/applicant",
+      JSON.stringify({ audience: "developers" }),
+      new Date("2024-01-17T00:00:00.000Z"),
+      new Date("2024-01-17T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "ProgramApplicationEvent" ("id", "programId", "visitedAt", "startedAt", "submittedAt", "approvedAt", "rejectedAt", "country", "referralSource", "referredByPartnerId", "metadata", "programApplicationId", "partnerId") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+    [
+      fixtureValues.programApplicationEventId,
+      fixtureValues.programId,
+      new Date("2024-01-17T01:00:00.000Z"),
+      new Date("2024-01-17T01:05:00.000Z"),
+      new Date("2024-01-17T01:10:00.000Z"),
+      null,
+      null,
+      "US",
+      "marketplace",
+      fixtureValues.partnerId,
+      JSON.stringify({ path: "/programs/runtime-sql-program" }),
+      fixtureValues.programApplicationId,
+      fixtureValues.partnerId,
+    ],
+  );
+  await pool.query(
+    'insert into "ProgramApplicationEvent" ("id", "programId", "visitedAt", "startedAt", "submittedAt", "approvedAt", "rejectedAt", "country", "referralSource", "referredByPartnerId", "metadata", "programApplicationId", "partnerId") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+    [
+      fixtureValues.programApplicationEventSecondId,
+      fixtureValues.programId,
+      new Date("2024-01-17T02:00:00.000Z"),
+      null,
+      null,
+      null,
+      new Date("2024-01-17T02:20:00.000Z"),
+      "CA",
+      "direct",
+      null,
+      JSON.stringify({ path: "/programs/runtime-sql-program?ref=direct" }),
+      null,
+      null,
     ],
   );
   await pool.query(
@@ -1470,6 +1574,8 @@ async function snapshotRuntimeFixture(pool) {
     invoices,
     payouts,
     commissions,
+    programApplications,
+    programApplicationEvents,
     notificationEmails,
     postbacks,
     customers,
@@ -1496,6 +1602,8 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Invoice" order by "id"'),
     pool.query('select * from "Payout" order by "id"'),
     pool.query('select * from "Commission" order by "id"'),
+    pool.query('select * from "ProgramApplication" order by "id"'),
+    pool.query('select * from "ProgramApplicationEvent" order by "id"'),
     pool.query('select * from "NotificationEmail" order by "id"'),
     pool.query('select * from "Postback" order by "id"'),
     pool.query('select * from "Customer" order by "id"'),
@@ -1524,6 +1632,8 @@ async function snapshotRuntimeFixture(pool) {
     Invoice: invoices.rows,
     Payout: payouts.rows,
     Commission: commissions.rows,
+    ProgramApplication: programApplications.rows,
+    ProgramApplicationEvent: programApplicationEvents.rows,
     NotificationEmail: notificationEmails.rows,
     Postback: postbacks.rows,
     Customer: customers.rows,
@@ -3607,6 +3717,204 @@ const programNetworkModule = {
   ],
 };
 
+const programApplicationModule = {
+  id: "program-application-runtime-module",
+  description:
+    "Module-sized comparison for program applications and application event funnel reads.",
+  operations: [
+    {
+      id: "program-application.read.pending-for-program",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.programApplication.findMany({
+          where: {
+            programId: fixtureValues.programId,
+            reviewedAt: null,
+          },
+          select: {
+            id: true,
+            programId: true,
+            groupId: true,
+            name: true,
+            email: true,
+            country: true,
+            formData: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.ProgramApplication.where((application) =>
+          and(
+            application.programId.eq(fixtureValues.programId),
+            application.reviewedAt.isNull(),
+          ),
+        )
+          .select(
+            "id",
+            "programId",
+            "groupId",
+            "name",
+            "email",
+            "country",
+            "formData",
+            "createdAt",
+          )
+          .orderBy((application) => application.createdAt.asc())
+          .all(),
+    },
+    {
+      id: "program-application.update.reject",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.programApplication.update({
+          where: {
+            id: fixtureValues.programApplicationId,
+          },
+          data: {
+            userId: fixtureValues.userId,
+            rejectionReason: "needsMoreDetail",
+            rejectionNote: "Runtime SQL rejection note",
+            reviewedAt: new Date("2024-01-17T03:00:00.000Z"),
+          },
+          select: {
+            id: true,
+            userId: true,
+            rejectionReason: true,
+            reviewedAt: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.ProgramApplication.where({
+          id: fixtureValues.programApplicationId,
+        })
+          .select("id", "userId", "rejectionReason", "reviewedAt", "updatedAt")
+          .update({
+            userId: fixtureValues.userId,
+            rejectionReason: "needsMoreDetail",
+            rejectionNote: "Runtime SQL rejection note",
+            reviewedAt: new Date("2024-01-17T03:00:00.000Z"),
+          }),
+    },
+    {
+      id: "program-application-event.aggregate.funnel-summary",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const [row] = await prisma.$queryRaw`
+          SELECT
+            COUNT("visitedAt") AS visits,
+            COUNT("startedAt") AS starts,
+            COUNT("submittedAt") AS submissions,
+            COUNT("approvedAt") AS approvals,
+            COUNT("rejectedAt") AS rejections
+          FROM "ProgramApplicationEvent"
+          WHERE "programId" = ${fixtureValues.programId}
+            AND "visitedAt" >= ${new Date("2024-01-17T00:00:00.000Z")}
+            AND "visitedAt" < ${new Date("2024-01-18T00:00:00.000Z")}
+        `;
+
+        return {
+          visits: Number(row.visits),
+          starts: Number(row.starts),
+          submissions: Number(row.submissions),
+          approvals: Number(row.approvals),
+          rejections: Number(row.rejections),
+        };
+      },
+      prismaNext: async ({ db }) => {
+        const dateRange = (event) =>
+          and(
+            event.programId.eq(fixtureValues.programId),
+            event.visitedAt.gte(new Date("2024-01-17T00:00:00.000Z")),
+            event.visitedAt.lt(new Date("2024-01-18T00:00:00.000Z")),
+          );
+        const visits = await db.orm.ProgramApplicationEvent.where(
+          dateRange,
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const starts = await db.orm.ProgramApplicationEvent.where((event) =>
+          and(dateRange(event), event.startedAt.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const submissions = await db.orm.ProgramApplicationEvent.where(
+          (event) => and(dateRange(event), event.submittedAt.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const approvals = await db.orm.ProgramApplicationEvent.where((event) =>
+          and(dateRange(event), event.approvedAt.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+        const rejections = await db.orm.ProgramApplicationEvent.where((event) =>
+          and(dateRange(event), event.rejectedAt.isNotNull()),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        }));
+
+        return {
+          visits: visits.count,
+          starts: starts.count,
+          submissions: submissions.count,
+          approvals: approvals.count,
+          rejections: rejections.count,
+        };
+      },
+    },
+    {
+      id: "program-application-event.read.referred-by-partner",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.programApplicationEvent.findMany({
+          where: {
+            programId: fixtureValues.programId,
+            referredByPartnerId: fixtureValues.partnerId,
+          },
+          select: {
+            id: true,
+            referralSource: true,
+            country: true,
+            application: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            visitedAt: "asc",
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.ProgramApplicationEvent.where((event) =>
+          and(
+            event.programId.eq(fixtureValues.programId),
+            event.referredByPartnerId.eq(fixtureValues.partnerId),
+          ),
+        )
+          .select("id", "referralSource", "country")
+          .include("application", (application) =>
+            application.select("id", "email"),
+          )
+          .orderBy((event) => event.visitedAt.asc())
+          .all(),
+    },
+  ],
+};
+
 const partnerModule = {
   id: "partner-runtime-module",
   description: "Module-sized comparison for partner profile reads.",
@@ -3851,6 +4159,7 @@ const runtimeModules = [
   domainModule,
   programModule,
   programNetworkModule,
+  programApplicationModule,
   partnerModule,
   programEnrollmentModule,
   customerModule,
