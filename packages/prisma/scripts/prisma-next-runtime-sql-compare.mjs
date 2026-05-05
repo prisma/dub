@@ -692,6 +692,13 @@ async function createRuntimeComparisonSchema(pool) {
       "applicationFormPublishedAt" timestamp(3),
       "landerData" jsonb,
       "landerPublishedAt" timestamp(3),
+      "logo" text,
+      "wordmark" text,
+      "brandColor" text,
+      "holdingPeriodDays" integer not null default 0,
+      "autoApprovePartnersEnabledAt" timestamp(3),
+      "workflowId" text unique,
+      "utmTemplateId" text unique,
       "createdAt" timestamp(3) not null default current_timestamp,
       "updatedAt" timestamp(3) not null,
       unique ("programId", "slug")
@@ -4070,6 +4077,127 @@ const programNetworkModule = {
   ],
 };
 
+const partnerGroupModule = {
+  id: "partner-group-runtime-module",
+  description:
+    "Module-sized comparison for partner group list reads with expanded enrollment counters.",
+  operations: [
+    {
+      id: "partner-group.read.expanded-list",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const groups = await prisma.$queryRaw`
+          SELECT
+            pg.id,
+            pg."programId",
+            pg.name,
+            pg.slug,
+            pg.color,
+            pg."clickRewardId",
+            pg."leadRewardId",
+            pg."saleRewardId",
+            pg."discountId",
+            pg."additionalLinks",
+            pg."maxPartnerLinks",
+            pg."linkStructure",
+            pg."applicationFormPublishedAt",
+            pg."landerPublishedAt",
+            pg."createdAt",
+            pg."updatedAt",
+            COUNT(DISTINCT pe."partnerId") as "totalPartners",
+            COALESCE(SUM(pe."totalClicks"), 0) as "totalClicks",
+            COALESCE(SUM(pe."totalLeads"), 0) as "totalLeads",
+            COALESCE(SUM(pe."totalSales"), 0) as "totalSales",
+            COALESCE(SUM(pe."totalSaleAmount"), 0) as "totalSaleAmount",
+            COALESCE(SUM(pe."totalConversions"), 0) as "totalConversions",
+            COALESCE(SUM(pe."totalCommissions"), 0) as "totalCommissions",
+            COALESCE(SUM(pe."totalSaleAmount"), 0) - COALESCE(SUM(pe."totalCommissions"), 0) as "netRevenue"
+          FROM "PartnerGroup" pg
+          LEFT JOIN "ProgramEnrollment" pe
+            ON pe."groupId" = pg.id AND pe.status = 'approved'
+          WHERE pg."programId" = ${fixtureValues.programId}
+          GROUP BY pg.id
+          ORDER BY "totalPartners" DESC
+          LIMIT 10 OFFSET 0
+        `;
+
+        return groups.map((group) => ({
+          ...group,
+          totalPartners: Number(group.totalPartners),
+          totalClicks: Number(group.totalClicks),
+          totalLeads: Number(group.totalLeads),
+          totalSales: Number(group.totalSales),
+          totalSaleAmount: Number(group.totalSaleAmount),
+          totalConversions: Number(group.totalConversions),
+          totalCommissions: Number(group.totalCommissions),
+          netRevenue: Number(group.netRevenue),
+        }));
+      },
+      prismaNext: async ({ db }) => {
+        const sum = (rows, field) =>
+          rows.reduce((total, row) => total + Number(row[field] ?? 0), 0);
+        const groups = await db.orm.PartnerGroup.where({
+          programId: fixtureValues.programId,
+        })
+          .select(
+            "id",
+            "programId",
+            "name",
+            "slug",
+            "color",
+            "clickRewardId",
+            "leadRewardId",
+            "saleRewardId",
+            "discountId",
+            "additionalLinks",
+            "maxPartnerLinks",
+            "linkStructure",
+            "applicationFormPublishedAt",
+            "landerPublishedAt",
+            "createdAt",
+            "updatedAt",
+          )
+          .include("partners", (partners) =>
+            partners
+              .where({ status: "approved" })
+              .select(
+                "partnerId",
+                "totalClicks",
+                "totalLeads",
+                "totalSales",
+                "totalSaleAmount",
+                "totalConversions",
+                "totalCommissions",
+              ),
+          )
+          .take(10)
+          .all()
+          .toArray();
+
+        return groups
+          .map(({ partners, ...group }) => ({
+            ...group,
+            totalPartners: new Set(
+              partners.map((enrollment) => enrollment.partnerId),
+            ).size,
+            totalClicks: sum(partners, "totalClicks"),
+            totalLeads: sum(partners, "totalLeads"),
+            totalSales: sum(partners, "totalSales"),
+            totalSaleAmount: sum(partners, "totalSaleAmount"),
+            totalConversions: sum(partners, "totalConversions"),
+            totalCommissions: sum(partners, "totalCommissions"),
+            netRevenue:
+              sum(partners, "totalSaleAmount") -
+              sum(partners, "totalCommissions"),
+          }))
+          .sort((left, right) => right.totalPartners - left.totalPartners);
+      },
+    },
+  ],
+};
+
 const programApplicationModule = {
   id: "program-application-runtime-module",
   description:
@@ -4705,6 +4833,7 @@ const runtimeModules = [
   domainModule,
   programModule,
   programNetworkModule,
+  partnerGroupModule,
   programApplicationModule,
   bountyModule,
   partnerModule,

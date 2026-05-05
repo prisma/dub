@@ -44,6 +44,8 @@ Current modules:
 - `program-network-runtime-module`: marketplace program availability counting
   and aggregations through `Program`, `ProgramCategory`, and `PartnerGroup`
   relation filters.
+- `partner-group-runtime-module`: partner group list reads with expanded
+  enrollment counters.
 - `program-application-runtime-module`: program application reads/review
   writes plus application event funnel counts and relation includes.
 - `bounty-runtime-module`: bounty details, grouped submission counts, and
@@ -99,6 +101,9 @@ Tracked write-query differences:
 - `bounty.read.details-with-groups` maps a Prisma 6 raw SQL query with a
   lateral-style JSON aggregate into Prisma Next high-level relation includes
   over `Workflow` and `BountyGroup`.
+- `partner-group.read.expanded-list` maps a Prisma 6 raw SQL aggregate join
+  into a Prisma Next high-level `PartnerGroup` read with included
+  `ProgramEnrollment` rows and JavaScript-side counter folding.
 
 ## Runtime Capture
 
