@@ -39,6 +39,8 @@ const fixtureValues = {
   notificationEmailId: "notification_email_runtime_sql",
   notificationEmailOpenedId: "notification_email_opened_runtime_sql",
   partnerId: "partner_runtime_sql",
+  postbackId: "postback_runtime_sql",
+  postbackDisabledId: "postback_disabled_runtime_sql",
   payoutId: "payout_runtime_sql",
   payoutPendingId: "payout_pending_runtime_sql",
   programEnrollmentId: "program_enrollment_runtime_sql",
@@ -881,6 +883,26 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create type "PostbackReceiver" as enum (
+      'custom',
+      'slack'
+    )
+  `);
+  await pool.query(`
+    create table "Postback" (
+      "id" text primary key,
+      "partnerId" text not null,
+      "name" text not null,
+      "url" text not null,
+      "secret" text not null,
+      "triggers" jsonb not null,
+      "receiver" "PostbackReceiver" not null,
+      "disabledAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
+    )
+  `);
+  await pool.query(`
     create table "Customer" (
       "id" text primary key,
       "name" text,
@@ -923,7 +945,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "NotificationEmail", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "Postback", "NotificationEmail", "Commission", "Payout", "Invoice", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -1180,6 +1202,36 @@ async function resetRuntimeFixture(pool, options = {}) {
     ],
   );
   await pool.query(
+    'insert into "Postback" ("id", "partnerId", "name", "url", "secret", "triggers", "receiver", "disabledAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [
+      fixtureValues.postbackId,
+      fixtureValues.partnerId,
+      "Runtime SQL Postback",
+      "https://example.com/postback",
+      "postback_secret_runtime_sql",
+      JSON.stringify(["lead.created", "sale.created"]),
+      "custom",
+      null,
+      new Date("2024-01-16T00:00:00.000Z"),
+      new Date("2024-01-16T00:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "Postback" ("id", "partnerId", "name", "url", "secret", "triggers", "receiver", "disabledAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [
+      fixtureValues.postbackDisabledId,
+      fixtureValues.partnerId,
+      "Runtime SQL Disabled Postback",
+      "https://example.com/postback-disabled",
+      "postback_disabled_secret_runtime_sql",
+      JSON.stringify(["lead.created"]),
+      "slack",
+      new Date("2024-01-16T01:00:00.000Z"),
+      new Date("2024-01-16T00:30:00.000Z"),
+      new Date("2024-01-16T01:00:00.000Z"),
+    ],
+  );
+  await pool.query(
     'insert into "ProjectUsers" ("id", "role", "userId", "projectId", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6)',
     [
       "project_user_runtime_sql",
@@ -1419,6 +1471,7 @@ async function snapshotRuntimeFixture(pool) {
     payouts,
     commissions,
     notificationEmails,
+    postbacks,
     customers,
     folders,
     folderUsers,
@@ -1444,6 +1497,7 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Payout" order by "id"'),
     pool.query('select * from "Commission" order by "id"'),
     pool.query('select * from "NotificationEmail" order by "id"'),
+    pool.query('select * from "Postback" order by "id"'),
     pool.query('select * from "Customer" order by "id"'),
     pool.query('select * from "Folder" order by "id"'),
     pool.query('select * from "FolderUser" order by "id"'),
@@ -1471,6 +1525,7 @@ async function snapshotRuntimeFixture(pool) {
     Payout: payouts.rows,
     Commission: commissions.rows,
     NotificationEmail: notificationEmails.rows,
+    Postback: postbacks.rows,
     Customer: customers.rows,
     Folder: folders.rows,
     FolderUser: folderUsers.rows,
@@ -2274,6 +2329,116 @@ const notificationEmailModule = {
           bounced: bounced.count,
         };
       },
+    },
+  ],
+};
+
+const postbackModule = {
+  id: "postback-runtime-module",
+  description:
+    "Module-sized comparison for partner postback lookup, JSON trigger filtering, and disable writes.",
+  operations: [
+    {
+      id: "postback.read.by-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.postback.findUnique({
+          where: {
+            id: fixtureValues.postbackId,
+          },
+          select: {
+            id: true,
+            partnerId: true,
+            name: true,
+            url: true,
+            receiver: true,
+            triggers: true,
+            disabledAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Postback.where({ id: fixtureValues.postbackId })
+          .select(
+            "id",
+            "partnerId",
+            "name",
+            "url",
+            "receiver",
+            "triggers",
+            "disabledAt",
+          )
+          .first(),
+    },
+    {
+      id: "postback.read.enabled-for-trigger",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.postback.findMany({
+          where: {
+            partnerId: fixtureValues.partnerId,
+            disabledAt: null,
+            triggers: {
+              array_contains: ["lead.created"],
+            },
+          },
+          select: {
+            id: true,
+            partnerId: true,
+            receiver: true,
+            triggers: true,
+            disabledAt: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        }),
+      prismaNext: async ({ db }) => {
+        const rows = await db.orm.Postback.where((postback) =>
+          and(
+            postback.partnerId.eq(fixtureValues.partnerId),
+            postback.disabledAt.isNull(),
+          ),
+        )
+          .select("id", "partnerId", "receiver", "triggers", "disabledAt")
+          .orderBy((postback) => postback.createdAt.asc())
+          .all()
+          .toArray();
+
+        return rows.filter(
+          (row) =>
+            Array.isArray(row.triggers) &&
+            row.triggers.includes("lead.created"),
+        );
+      },
+    },
+    {
+      id: "postback.update.disable",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.postback.update({
+          where: {
+            id: fixtureValues.postbackId,
+          },
+          data: {
+            disabledAt: new Date("2024-01-16T02:00:00.000Z"),
+          },
+          select: {
+            id: true,
+            disabledAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Postback.where({ id: fixtureValues.postbackId })
+          .select("id", "disabledAt")
+          .update({
+            disabledAt: new Date("2024-01-16T02:00:00.000Z"),
+          }),
     },
   ],
 };
@@ -3672,6 +3837,7 @@ const runtimeModules = [
   analyticsModule,
   commissionsPayoutsModule,
   notificationEmailModule,
+  postbackModule,
   usageCounterModule,
   workspaceProductModule,
   workspaceModule,

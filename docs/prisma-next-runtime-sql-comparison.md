@@ -19,6 +19,8 @@ Current modules:
   writes.
 - `notification-email-runtime-module`: notification email webhook reads/writes
   plus campaign summary aggregation.
+- `postback-runtime-module`: partner postback lookup, JSON trigger filtering,
+  and disable writes.
 - `usage-counter-runtime-module`: link, workspace, and program-enrollment
   usage counter reads and writes.
 - `workspace-product-runtime-module`: workspace product resolution from
@@ -79,6 +81,10 @@ Tracked write-query differences:
   while Prisma Next sends a JavaScript `Date` to the driver. The returned JS
   value shape matches, but the raw fixture snapshot captures the resulting
   `timestamp(3)` state difference.
+- `postback.read.enabled-for-trigger` keeps the Prisma 6 JSON
+  `array_contains` predicate as the baseline. The current Prisma Next
+  high-level ORM path fetches enabled partner postbacks and applies the JSON
+  trigger membership check in JavaScript.
 
 ## Runtime Capture
 
