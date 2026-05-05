@@ -1,4 +1,5 @@
 import postgres from "@prisma-next/postgres/runtime";
+import { and } from "@prisma-next/sql-orm-client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
@@ -604,6 +605,29 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create table "PartnerGroup" (
+      "id" text primary key,
+      "programId" text not null,
+      "name" text not null,
+      "slug" text not null,
+      "color" text,
+      "clickRewardId" text unique,
+      "leadRewardId" text unique,
+      "saleRewardId" text unique,
+      "discountId" text unique,
+      "linkStructure" text not null default 'short',
+      "additionalLinks" jsonb,
+      "maxPartnerLinks" integer not null default 0,
+      "applicationFormData" jsonb,
+      "applicationFormPublishedAt" timestamp(3),
+      "landerData" jsonb,
+      "landerPublishedAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      unique ("programId", "slug")
+    )
+  `);
+  await pool.query(`
     create table "Partner" (
       "id" text primary key,
       "name" text not null,
@@ -694,7 +718,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "ProgramEnrollment", "Partner", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "ProgramEnrollment", "Partner", "PartnerGroup", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -764,6 +788,19 @@ async function resetRuntimeFixture(pool, options = {}) {
       new Date("2024-01-04T02:00:00.000Z"),
       new Date("2024-01-04T02:00:00.000Z"),
       new Date("2024-01-04T03:00:00.000Z"),
+    ],
+  );
+  await pool.query(
+    'insert into "PartnerGroup" ("id", "programId", "name", "slug", "color", "applicationFormPublishedAt", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    [
+      fixtureValues.partnerGroupId,
+      fixtureValues.programId,
+      "Default",
+      "default",
+      "blue",
+      new Date("2024-01-04T03:30:00.000Z"),
+      new Date("2024-01-04T03:30:00.000Z"),
+      new Date("2024-01-04T03:30:00.000Z"),
     ],
   );
   await pool.query(
@@ -1035,6 +1072,7 @@ async function snapshotRuntimeFixture(pool) {
     domains,
     registeredDomains,
     programs,
+    partnerGroups,
     partners,
     programEnrollments,
     customers,
@@ -1055,6 +1093,7 @@ async function snapshotRuntimeFixture(pool) {
     pool.query('select * from "Domain" order by "id"'),
     pool.query('select * from "RegisteredDomain" order by "id"'),
     pool.query('select * from "Program" order by "id"'),
+    pool.query('select * from "PartnerGroup" order by "id"'),
     pool.query('select * from "Partner" order by "id"'),
     pool.query('select * from "ProgramEnrollment" order by "id"'),
     pool.query('select * from "Customer" order by "id"'),
@@ -1077,6 +1116,7 @@ async function snapshotRuntimeFixture(pool) {
     Domain: domains.rows,
     RegisteredDomain: registeredDomains.rows,
     Program: programs.rows,
+    PartnerGroup: partnerGroups.rows,
     Partner: partners.rows,
     ProgramEnrollment: programEnrollments.rows,
     Customer: customers.rows,
@@ -2630,6 +2670,51 @@ const programModule = {
   ],
 };
 
+const programNetworkModule = {
+  id: "program-network-runtime-module",
+  description:
+    "Module-sized comparison for marketplace program availability counting.",
+  operations: [
+    {
+      id: "program-network.read.available-program-count",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => ({
+        count: await prisma.program.count({
+          where: {
+            addedToMarketplaceAt: {
+              not: null,
+            },
+            groups: {
+              some: {
+                slug: "default",
+                applicationFormPublishedAt: {
+                  not: null,
+                },
+              },
+            },
+          },
+        }),
+      }),
+      prismaNext: ({ db }) =>
+        db.orm.Program.where((program) =>
+          and(
+            program.addedToMarketplaceAt.isNotNull(),
+            program.groups.some((group) =>
+              and(
+                group.slug.eq("default"),
+                group.applicationFormPublishedAt.isNotNull(),
+              ),
+            ),
+          ),
+        ).aggregate((aggregate) => ({
+          count: aggregate.count(),
+        })),
+    },
+  ],
+};
+
 const partnerModule = {
   id: "partner-runtime-module",
   description: "Module-sized comparison for partner profile reads.",
@@ -2870,6 +2955,7 @@ const runtimeModules = [
   installedIntegrationModule,
   domainModule,
   programModule,
+  programNetworkModule,
   partnerModule,
   programEnrollmentModule,
   customerModule,

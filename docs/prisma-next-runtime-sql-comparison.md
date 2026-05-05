@@ -34,6 +34,8 @@ Current modules:
   delete writes.
 - `domain-runtime-module`: workspace domain scalar reads.
 - `program-runtime-module`: basic program fetcher reads.
+- `program-network-runtime-module`: marketplace program availability counting
+  through `Program`/`PartnerGroup` relation filters.
 - `partner-runtime-module`: partner profile reads and update writes.
 - `program-enrollment-runtime-module`: program enrollment compound-key reads
   and partner includes.

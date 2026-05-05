@@ -24,7 +24,8 @@
     "@prisma/adapter-pg": "6.19.1",
     "@prisma/client": "6.19.1",
     "pg": "8.16.0",
-    "@prisma-next/postgres": "file:./vendor/prisma-next/prisma-next-postgres-0.0.1.tgz"
+    "@prisma-next/postgres": "file:./vendor/prisma-next/prisma-next-postgres-0.0.1.tgz",
+    "@prisma-next/sql-orm-client": "file:./vendor/prisma-next/prisma-next-sql-orm-client-0.0.1.tgz"
   },
   "devDependencies": {
     "@prisma-next/cli": "file:./vendor/prisma-next/prisma-next-cli-0.0.1.tgz",
