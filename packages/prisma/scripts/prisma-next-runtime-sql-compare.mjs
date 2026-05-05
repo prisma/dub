@@ -41,6 +41,7 @@ const fixtureValues = {
   projectSlug: "runtime-sql-project",
   restrictedTokenId: "restricted_token_runtime_sql",
   tagId: "tag_runtime_sql",
+  tagCreateId: "tag_runtime_sql_create",
   userId: "user_runtime_sql",
   webhookId: "webhook_runtime_sql",
 };
@@ -414,6 +415,16 @@ async function createRuntimeComparisonSchema(pool) {
     )
   `);
   await pool.query(`
+    create table "LinkTag" (
+      "id" text primary key,
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "linkId" text not null,
+      "tagId" text not null,
+      unique ("linkId", "tagId")
+    )
+  `);
+  await pool.query(`
     create table "RestrictedToken" (
       "id" text primary key,
       "name" text not null,
@@ -427,6 +438,16 @@ async function createRuntimeComparisonSchema(pool) {
       "userId" text not null,
       "projectId" text not null,
       "installationId" text
+    )
+  `);
+  await pool.query(`
+    create table "OAuthRefreshToken" (
+      "id" text primary key,
+      "installationId" text not null,
+      "accessTokenId" text not null,
+      "hashedRefreshToken" text unique not null,
+      "expiresAt" timestamp(3) not null,
+      "createdAt" timestamp(3) not null default current_timestamp
     )
   `);
   await pool.query(`
@@ -599,7 +620,7 @@ async function createRuntimeComparisonSchema(pool) {
 async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
   await pool.query(
-    'truncate table "Dashboard", "Customer", "ProgramEnrollment", "Partner", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "RestrictedToken", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
+    'truncate table "Dashboard", "Customer", "ProgramEnrollment", "Partner", "Program", "RegisteredDomain", "Domain", "LinkWebhook", "Webhook", "OAuthRefreshToken", "RestrictedToken", "LinkTag", "Tag", "InstalledIntegration", "Integration", "FolderUser", "ProjectUsers", "Link", "Folder", "Project", "User"',
   );
   await pool.query(
     'insert into "User" ("id", "name", "image", "isMachine") values ($1, $2, $3, $4)',
@@ -1625,6 +1646,86 @@ const tagModule = {
           .skip(0)
           .all(),
     },
+    {
+      id: "tag.create.for-workspace",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.tag.create({
+          data: {
+            id: fixtureValues.tagCreateId,
+            name: "Created Runtime SQL Tag",
+            color: "red",
+            projectId: fixtureValues.projectId,
+          },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            projectId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Tag.create({
+          id: fixtureValues.tagCreateId,
+          name: "Created Runtime SQL Tag",
+          color: "red",
+          projectId: fixtureValues.projectId,
+        }),
+    },
+    {
+      id: "tag.update.name",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.tag.update({
+          where: {
+            id: fixtureValues.tagId,
+          },
+          data: {
+            name: "Updated Runtime SQL Tag",
+          },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            projectId: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Tag.where({ id: fixtureValues.tagId })
+          .select("id", "name", "color", "projectId", "updatedAt")
+          .update({
+            name: "Updated Runtime SQL Tag",
+          }),
+    },
+    {
+      id: "tag.delete.by-id",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.tag.delete({
+          where: {
+            id: fixtureValues.tagId,
+          },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            projectId: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Tag.where({ id: fixtureValues.tagId })
+          .select("id", "name", "color", "projectId")
+          .delete(),
+    },
   ],
 };
 
@@ -1688,6 +1789,58 @@ const tokenModule = {
           .take(100)
           .all(),
     },
+    {
+      id: "token.update.name",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.restrictedToken.update({
+          where: {
+            id: fixtureValues.restrictedTokenId,
+          },
+          data: {
+            name: "Updated Runtime SQL Token",
+          },
+          select: {
+            id: true,
+            name: true,
+            partialKey: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.RestrictedToken.where({
+          id: fixtureValues.restrictedTokenId,
+        })
+          .select("id", "name", "partialKey", "updatedAt")
+          .update({
+            name: "Updated Runtime SQL Token",
+          }),
+    },
+    {
+      id: "token.delete.by-id",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.restrictedToken.delete({
+          where: {
+            id: fixtureValues.restrictedTokenId,
+          },
+          select: {
+            id: true,
+            name: true,
+            partialKey: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.RestrictedToken.where({
+          id: fixtureValues.restrictedTokenId,
+        })
+          .select("id", "name", "partialKey")
+          .delete(),
+    },
   ],
 };
 
@@ -1742,6 +1895,117 @@ const webhookModule = {
           .include("links")
           .orderBy((webhook) => webhook.createdAt.desc())
           .all(),
+    },
+    {
+      id: "webhook.update.url",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.webhook.update({
+          where: {
+            id: fixtureValues.webhookId,
+          },
+          data: {
+            url: "https://example.com/updated-webhook",
+          },
+          select: {
+            id: true,
+            url: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Webhook.where({ id: fixtureValues.webhookId })
+          .select("id", "url", "updatedAt")
+          .update({
+            url: "https://example.com/updated-webhook",
+          }),
+    },
+    {
+      id: "webhook.delete.by-id",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.webhook.delete({
+          where: {
+            id: fixtureValues.webhookId,
+          },
+          select: {
+            id: true,
+            url: true,
+            projectId: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Webhook.where({ id: fixtureValues.webhookId })
+          .select("id", "url", "projectId")
+          .delete(),
+    },
+  ],
+};
+
+const installedIntegrationModule = {
+  id: "installed-integration-runtime-module",
+  description:
+    "Module-sized comparison for installed integration lookup and deletion.",
+  operations: [
+    {
+      id: "installed-integration.read.by-id-with-integration",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.installedIntegration.findUnique({
+          where: {
+            id: fixtureValues.installedIntegrationId,
+          },
+          select: {
+            id: true,
+            projectId: true,
+            userId: true,
+            integration: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+              },
+            },
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.InstalledIntegration.where({
+          id: fixtureValues.installedIntegrationId,
+        })
+          .select("id", "projectId", "userId")
+          .include("integration", (integration) =>
+            integration.select("id", "slug", "name"),
+          )
+          .first(),
+    },
+    {
+      id: "installed-integration.delete.by-id",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.installedIntegration.delete({
+          where: {
+            id: fixtureValues.installedIntegrationId,
+          },
+          select: {
+            id: true,
+            projectId: true,
+            integrationId: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.InstalledIntegration.where({
+          id: fixtureValues.installedIntegrationId,
+        })
+          .select("id", "projectId", "integrationId")
+          .delete(),
     },
   ],
 };
@@ -1912,6 +2176,35 @@ const partnerModule = {
         db.orm.Partner.where({ id: fixtureValues.partnerId })
           .select("id", "name", "email", "image", "country", "payoutsEnabledAt")
           .first(),
+    },
+    {
+      id: "partner.update.name",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.partner.update({
+          where: {
+            id: fixtureValues.partnerId,
+          },
+          data: {
+            name: "Updated Runtime SQL Partner",
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Partner.where({
+          id: fixtureValues.partnerId,
+        })
+          .select("id", "name", "email", "updatedAt")
+          .update({
+            name: "Updated Runtime SQL Partner",
+          }),
     },
   ],
 };
@@ -2089,6 +2382,7 @@ const runtimeModules = [
   tagModule,
   tokenModule,
   webhookModule,
+  installedIntegrationModule,
   domainModule,
   programModule,
   partnerModule,

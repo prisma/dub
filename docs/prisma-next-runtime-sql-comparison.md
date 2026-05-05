@@ -16,12 +16,17 @@ Current modules:
 - `folder-runtime-module`: folder access lookups with filtered `FolderUser`
   includes.
 - `integration-runtime-module`: verified integrations installed in a workspace.
-- `tag-runtime-module`: tag list and search reads.
-- `token-runtime-module`: restricted token listing with user includes.
-- `webhook-runtime-module`: workspace webhook reads with `LinkWebhook` includes.
+- `tag-runtime-module`: tag list/search reads plus create, update, and delete
+  writes.
+- `token-runtime-module`: restricted token listing with user includes plus
+  update and delete writes.
+- `webhook-runtime-module`: workspace webhook reads with `LinkWebhook` includes
+  plus update and delete writes.
+- `installed-integration-runtime-module`: installed integration lookup and
+  delete writes.
 - `domain-runtime-module`: workspace domain scalar reads.
 - `program-runtime-module`: basic program fetcher reads.
-- `partner-runtime-module`: partner profile reads.
+- `partner-runtime-module`: partner profile reads and update writes.
 - `program-enrollment-runtime-module`: program enrollment compound-key reads
   and partner includes.
 - `customer-runtime-module`: customer cursor and list reads.
