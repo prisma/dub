@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 const repoRoot = join(process.cwd(), "..", "..");
@@ -7,8 +7,24 @@ const outputPath =
   join(process.cwd(), ".tmp", "prisma-next-raw-sql-inventory.json");
 
 const scanRoots = ["apps", "packages"].map((root) => join(repoRoot, root));
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
-const ignoredPathParts = new Set(["node_modules", ".next", "dist", "build", "coverage"]);
+const sourceExtensions = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+]);
+const ignoredPathParts = new Set([
+  "node_modules",
+  ".next",
+  "dist",
+  "build",
+  "coverage",
+]);
+const ignoredRelativePaths = new Set([
+  "packages/prisma/scripts/prisma-next-runtime-sql-compare.mjs",
+]);
 
 const executionPatterns = [
   { kind: "prisma-query-raw", pattern: /\.\$queryRaw(?:Unsafe)?\b/g },
@@ -64,7 +80,10 @@ function contextSnippet(source, index) {
 
   const start = lineStarts[contextStartLine] ?? 0;
   const statementEnd = source.indexOf(";", index);
-  const end = statementEnd === -1 ? Math.min(source.length, index + 4_000) : statementEnd + 1;
+  const end =
+    statementEnd === -1
+      ? Math.min(source.length, index + 4_000)
+      : statementEnd + 1;
   return source.slice(start, Math.min(end, index + 8_000));
 }
 
@@ -120,7 +139,10 @@ function classifyUsage(kind, snippet, features) {
     };
   }
 
-  if (kind === "postgres-helper-execute" && !/conn\.execute\s*\(\s*`/m.test(snippet)) {
+  if (
+    kind === "postgres-helper-execute" &&
+    !/conn\.execute\s*\(\s*`/m.test(snippet)
+  ) {
     return {
       supportedBy: "manual-review",
       confidence: "low",
@@ -138,7 +160,9 @@ function classifyUsage(kind, snippet, features) {
     "window",
     "dynamic-list",
   ];
-  const hasComplexFeature = complexFeatures.some((feature) => features.includes(feature));
+  const hasComplexFeature = complexFeatures.some((feature) =>
+    features.includes(feature),
+  );
   if (hasComplexFeature) {
     return {
       supportedBy: "not-currently-covered",
@@ -148,7 +172,11 @@ function classifyUsage(kind, snippet, features) {
     };
   }
 
-  if (features.includes("join") || features.includes("group-by") || features.includes("aggregate")) {
+  if (
+    features.includes("join") ||
+    features.includes("group-by") ||
+    features.includes("aggregate")
+  ) {
     return {
       supportedBy: "query-builder-api",
       confidence: "medium",
@@ -157,11 +185,16 @@ function classifyUsage(kind, snippet, features) {
     };
   }
 
-  if (features.includes("delete") || features.includes("update") || features.includes("insert")) {
+  if (
+    features.includes("delete") ||
+    features.includes("update") ||
+    features.includes("insert")
+  ) {
     return {
       supportedBy: "orm-api",
       confidence: "medium",
-      reason: "Looks like single-table write SQL that maps to ORM create/update/delete APIs.",
+      reason:
+        "Looks like single-table write SQL that maps to ORM create/update/delete APIs.",
     };
   }
 
@@ -177,7 +210,8 @@ function classifyUsage(kind, snippet, features) {
   return {
     supportedBy: "manual-review",
     confidence: "low",
-    reason: "The execution site is raw SQL, but the local snippet does not expose enough SQL shape.",
+    reason:
+      "The execution site is raw SQL, but the local snippet does not expose enough SQL shape.",
   };
 }
 
@@ -234,7 +268,9 @@ function summarize(executions) {
   }
 
   const toObject = (map) =>
-    Object.fromEntries([...map.entries()].sort(([left], [right]) => left.localeCompare(right)));
+    Object.fromEntries(
+      [...map.entries()].sort(([left], [right]) => left.localeCompare(right)),
+    );
 
   return {
     totalExecutionSites: executions.length,
@@ -245,7 +281,9 @@ function summarize(executions) {
 }
 
 function main() {
-  const files = scanRoots.flatMap((root) => walk(root));
+  const files = scanRoots
+    .flatMap((root) => walk(root))
+    .filter((file) => !ignoredRelativePaths.has(relative(repoRoot, file)));
   const executions = [];
   const fragments = [];
 
@@ -259,7 +297,7 @@ function main() {
     generatedAt: new Date().toISOString(),
     strategy: {
       scope:
-        "Static inventory of raw SQL execution sites in apps/ and packages/. Prisma.sql fragments are counted separately from executed raw SQL calls.",
+        "Static inventory of raw SQL execution sites in apps/ and packages/, excluding this branch's Prisma Next comparison harness. Prisma.sql fragments are counted separately from executed raw SQL calls.",
       classification:
         "Conservative heuristic: simple model CRUD is classified as ORM API; joins/aggregates as lower-level query builder candidates; CTEs/date bucketing/JSON/window/dynamic SQL as not currently covered or manual review.",
     },
@@ -267,7 +305,12 @@ function main() {
     executions,
     fragments: {
       total: fragments.length,
-      byKind: summarize(fragments.map((fragment) => ({ ...fragment, classification: { supportedBy: "fragment" } }))).byKind,
+      byKind: summarize(
+        fragments.map((fragment) => ({
+          ...fragment,
+          classification: { supportedBy: "fragment" },
+        })),
+      ).byKind,
       items: fragments,
     },
   };
