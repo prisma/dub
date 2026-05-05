@@ -16,6 +16,8 @@
     "next:emit": "prisma-next contract emit --config ./prisma-next.config.ts && tsx ./scripts/prisma-next-normalize-contract.ts",
     "next:smoke": "node ./scripts/prisma-next-smoke.mjs",
     "next:ddl:compare": "tsx ./scripts/prisma-next-ddl-compare.ts",
+    "next:sql:compare": "node ./scripts/prisma-next-runtime-sql-compare.mjs",
+    "next:raw:inventory": "node ./scripts/prisma-next-raw-sql-inventory.mjs",
     "next:validate": "pnpm run next:emit && pnpm run next:smoke && pnpm run next:ddl:compare"
   },
   "dependencies": {
