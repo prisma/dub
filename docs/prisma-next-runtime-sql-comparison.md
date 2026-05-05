@@ -1,8 +1,17 @@
 # Prisma Next Runtime SQL Comparison
 
 This branch compares Prisma 6 Client and Prisma Next one runtime module at a
-time. The first fixture is `dashboard-runtime-module`, covering Dashboard reads
-and writes without changing app-wide Prisma imports.
+time, without changing app-wide Prisma imports.
+
+Current modules:
+
+- `dashboard-runtime-module`: Dashboard relation reads plus create, update, and
+  delete writes.
+- `user-runtime-module`: user existence lookups by `User.id`.
+- `link-runtime-module`: short-link existence lookups by the `Link.domain/key`
+  compound identity.
+- `workspace-product-runtime-module`: workspace product resolution from
+  `Project.defaultProgramId`.
 
 ## Runtime Capture
 

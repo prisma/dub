@@ -1,16 +1,19 @@
+import postgres from "@prisma-next/postgres/runtime";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
-import postgres from "@prisma-next/postgres/runtime";
 import { Pool } from "pg";
 import contractJson from "../schema/contract.json" with { type: "json" };
 
 const baseDatabaseUrl =
-  process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/dub";
-const prisma6RootDatabaseUrl = process.env.PRISMA6_DATABASE_URL ?? baseDatabaseUrl;
-const prismaNextRootDatabaseUrl = process.env.PRISMA_NEXT_DATABASE_URL ?? baseDatabaseUrl;
+  process.env.DATABASE_URL ??
+  "postgresql://postgres:postgres@localhost:5432/dub";
+const prisma6RootDatabaseUrl =
+  process.env.PRISMA6_DATABASE_URL ?? baseDatabaseUrl;
+const prismaNextRootDatabaseUrl =
+  process.env.PRISMA_NEXT_DATABASE_URL ?? baseDatabaseUrl;
 
 const outputPath =
   process.env.PRISMA_NEXT_SQL_COMPARE_OUT ??
@@ -24,7 +27,11 @@ const dashboardIds = {
 const fixtureValues = {
   linkId: "link_runtime_sql",
   folderId: "fold_runtime_sql",
+  programWorkspaceId: "proj_runtime_sql_program",
+  programWorkspaceSlug: "runtime-sql-program-workspace",
+  programId: "prog_runtime_sql",
   projectId: "proj_runtime_sql",
+  projectSlug: "runtime-sql-project",
   userId: "user_runtime_sql",
 };
 
@@ -45,7 +52,9 @@ const adminDatabaseUrlFor = (rootDatabaseUrl) => {
 const describeDatabaseUrl = (databaseUrl) => {
   const url = new URL(databaseUrl);
   const username = url.username ? decodeURIComponent(url.username) : "";
-  const auth = username ? `${username}${url.password ? ":<redacted>" : ""}@` : "";
+  const auth = username
+    ? `${username}${url.password ? ":<redacted>" : ""}@`
+    : "";
   return `${url.protocol}//${auth}${url.host}${url.pathname}`;
 };
 
@@ -89,7 +98,10 @@ function describeValue(value, depth = 0) {
       kind: "array",
       constructor: "Array",
       length: value.length,
-      items: depth >= 3 ? [] : value.slice(0, 5).map((item) => describeValue(item, depth + 1)),
+      items:
+        depth >= 3
+          ? []
+          : value.slice(0, 5).map((item) => describeValue(item, depth + 1)),
     };
   }
   const type = typeof value;
@@ -110,7 +122,10 @@ function describeValue(value, depth = 0) {
       depth >= 3
         ? undefined
         : Object.fromEntries(
-            entries.map(([key, fieldValue]) => [key, describeValue(fieldValue, depth + 1)]),
+            entries.map(([key, fieldValue]) => [
+              key,
+              describeValue(fieldValue, depth + 1),
+            ]),
           ),
   };
 }
@@ -247,13 +262,14 @@ async function createDatabase(pool, name) {
 }
 
 async function dropDatabase(pool, name) {
-  await pool.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = $1", [
-    name,
-  ]);
+  await pool.query(
+    "select pg_terminate_backend(pid) from pg_stat_activity where datname = $1",
+    [name],
+  );
   await pool.query(`DROP DATABASE IF EXISTS ${quoteIdent(name)}`);
 }
 
-async function createMinimalDashboardSchema(pool) {
+async function createRuntimeComparisonSchema(pool) {
   await pool.query("create schema if not exists prisma_contract");
   await pool.query(`
     create table prisma_contract.marker (
@@ -276,7 +292,9 @@ async function createMinimalDashboardSchema(pool) {
   await pool.query(`
     create table "Project" (
       "id" text primary key,
+      "name" text,
       "slug" text unique,
+      "defaultProgramId" text unique,
       "plan" text not null default 'pro'
     )
   `);
@@ -289,7 +307,8 @@ async function createMinimalDashboardSchema(pool) {
       "folderId" text,
       "projectId" text,
       "userId" text,
-      "publicStats" boolean not null default false
+      "publicStats" boolean not null default false,
+      unique ("domain", "key")
     )
   `);
   await pool.query(`
@@ -315,13 +334,33 @@ async function createMinimalDashboardSchema(pool) {
   `);
 }
 
-async function resetDashboardFixture(pool, options = {}) {
+async function resetRuntimeFixture(pool, options = {}) {
   const { includeDashboard = true } = options;
-  await pool.query('truncate table "Dashboard", "Link", "Folder", "Project", "User"');
-  await pool.query('insert into "User" ("id") values ($1)', [fixtureValues.userId]);
   await pool.query(
-    'insert into "Project" ("id", "slug", "plan") values ($1, $2, $3)',
-    [fixtureValues.projectId, "runtime-sql-project", "pro"],
+    'truncate table "Dashboard", "Link", "Folder", "Project", "User"',
+  );
+  await pool.query('insert into "User" ("id") values ($1)', [
+    fixtureValues.userId,
+  ]);
+  await pool.query(
+    'insert into "Project" ("id", "name", "slug", "defaultProgramId", "plan") values ($1, $2, $3, $4, $5)',
+    [
+      fixtureValues.projectId,
+      "Runtime SQL Project",
+      fixtureValues.projectSlug,
+      null,
+      "pro",
+    ],
+  );
+  await pool.query(
+    'insert into "Project" ("id", "name", "slug", "defaultProgramId", "plan") values ($1, $2, $3, $4, $5)',
+    [
+      fixtureValues.programWorkspaceId,
+      "Runtime SQL Program Workspace",
+      fixtureValues.programWorkspaceSlug,
+      fixtureValues.programId,
+      "business",
+    ],
   );
   await pool.query(
     'insert into "Folder" ("id", "name", "projectId") values ($1, $2, $3)',
@@ -358,7 +397,7 @@ async function resetDashboardFixture(pool, options = {}) {
   }
 }
 
-async function snapshotDashboardFixture(pool) {
+async function snapshotRuntimeFixture(pool) {
   const [users, projects, folders, links, dashboards] = await Promise.all([
     pool.query('select * from "User" order by "id"'),
     pool.query('select * from "Project" order by "id"'),
@@ -386,7 +425,8 @@ function compareSnapshots(prisma6Snapshot, prismaNextSnapshot) {
     prisma6Hash: stableHash(prisma6Snapshot),
     prismaNextHash: stableHash(prismaNextSnapshot),
     valueEqual: stableJson(prisma6Snapshot) === stableJson(prismaNextSnapshot),
-    typeShapeEqual: stableJson(prisma6TypeShape) === stableJson(prismaNextTypeShape),
+    typeShapeEqual:
+      stableJson(prisma6TypeShape) === stableJson(prismaNextTypeShape),
     prisma6Summary,
     prismaNextSummary,
     prisma6TypeShape,
@@ -437,7 +477,8 @@ const dashboardModule = {
     {
       id: "dashboard.read.selected-relations",
       kind: "read",
-      setup: ({ pool }) => resetDashboardFixture(pool, { includeDashboard: true }),
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: true }),
       prisma6: ({ prisma }) =>
         prisma.dashboard.findUnique({
           where: { id: dashboardIds.existing },
@@ -478,7 +519,8 @@ const dashboardModule = {
     {
       id: "dashboard.create.link-dashboard",
       kind: "write",
-      setup: ({ pool }) => resetDashboardFixture(pool, { includeDashboard: false }),
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
       prisma6: ({ prisma }) =>
         prisma.dashboard.create({
           data: {
@@ -501,7 +543,8 @@ const dashboardModule = {
     {
       id: "dashboard.update.password",
       kind: "write",
-      setup: ({ pool }) => resetDashboardFixture(pool, { includeDashboard: true }),
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: true }),
       prisma6: ({ prisma }) =>
         prisma.dashboard.update({
           where: { id: dashboardIds.existing },
@@ -515,7 +558,8 @@ const dashboardModule = {
     {
       id: "dashboard.update.explicit-updated-at",
       kind: "write",
-      setup: ({ pool }) => resetDashboardFixture(pool, { includeDashboard: true }),
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: true }),
       prisma6: ({ prisma }) =>
         prisma.dashboard.update({
           where: { id: dashboardIds.existing },
@@ -533,7 +577,8 @@ const dashboardModule = {
     {
       id: "dashboard.delete",
       kind: "write",
-      setup: ({ pool }) => resetDashboardFixture(pool, { includeDashboard: true }),
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: true }),
       prisma6: ({ prisma }) =>
         prisma.dashboard.delete({
           where: {
@@ -549,6 +594,171 @@ const dashboardModule = {
     },
   ],
 };
+
+const userModule = {
+  id: "user-runtime-module",
+  description:
+    "Module-sized comparison for user existence lookups, representative of request/auth helper reads.",
+  operations: [
+    {
+      id: "user.read.exists-by-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) =>
+        Boolean(
+          await prisma.user.findUnique({
+            where: { id: fixtureValues.userId },
+            select: { id: true },
+          }),
+        ),
+      prismaNext: async ({ db }) =>
+        Boolean(
+          await db.orm.User.where({ id: fixtureValues.userId })
+            .select("id")
+            .first(),
+        ),
+    },
+    {
+      id: "user.read.missing-by-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) =>
+        Boolean(
+          await prisma.user.findUnique({
+            where: { id: "missing_runtime_sql_user" },
+            select: { id: true },
+          }),
+        ),
+      prismaNext: async ({ db }) =>
+        Boolean(
+          await db.orm.User.where({ id: "missing_runtime_sql_user" })
+            .select("id")
+            .first(),
+        ),
+    },
+  ],
+};
+
+const linkModule = {
+  id: "link-runtime-module",
+  description:
+    "Module-sized comparison for short-link existence lookups by domain/key compound identity.",
+  operations: [
+    {
+      id: "link.read.exists-by-domain-key",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) =>
+        Boolean(
+          await prisma.link.findUnique({
+            where: {
+              domain_key: {
+                domain: "dub.sh",
+                key: "runtime-sql",
+              },
+            },
+            select: { id: true },
+          }),
+        ),
+      prismaNext: async ({ db }) =>
+        Boolean(
+          await db.orm.Link.where({
+            domain: "dub.sh",
+            key: "runtime-sql",
+          })
+            .select("id")
+            .first(),
+        ),
+    },
+    {
+      id: "link.read.missing-by-domain-key",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) =>
+        Boolean(
+          await prisma.link.findUnique({
+            where: {
+              domain_key: {
+                domain: "dub.sh",
+                key: "missing-runtime-sql",
+              },
+            },
+            select: { id: true },
+          }),
+        ),
+      prismaNext: async ({ db }) =>
+        Boolean(
+          await db.orm.Link.where({
+            domain: "dub.sh",
+            key: "missing-runtime-sql",
+          })
+            .select("id")
+            .first(),
+        ),
+    },
+  ],
+};
+
+const workspaceProductModule = {
+  id: "workspace-product-runtime-module",
+  description:
+    "Module-sized comparison for resolving workspace product mode from Project.defaultProgramId.",
+  operations: [
+    {
+      id: "workspace-product.read.links-workspace",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const workspace = await prisma.project.findUnique({
+          where: { slug: fixtureValues.projectSlug },
+          select: { defaultProgramId: true },
+        });
+        return workspace?.defaultProgramId ? "program" : "links";
+      },
+      prismaNext: async ({ db }) => {
+        const workspace = await db.orm.Project.where({
+          slug: fixtureValues.projectSlug,
+        })
+          .select("defaultProgramId")
+          .first();
+        return workspace?.defaultProgramId ? "program" : "links";
+      },
+    },
+    {
+      id: "workspace-product.read.program-workspace",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const workspace = await prisma.project.findUnique({
+          where: { slug: fixtureValues.programWorkspaceSlug },
+          select: { defaultProgramId: true },
+        });
+        return workspace?.defaultProgramId ? "program" : "links";
+      },
+      prismaNext: async ({ db }) => {
+        const workspace = await db.orm.Project.where({
+          slug: fixtureValues.programWorkspaceSlug,
+        })
+          .select("defaultProgramId")
+          .first();
+        return workspace?.defaultProgramId ? "program" : "links";
+      },
+    },
+  ],
+};
+
+const runtimeModules = [
+  dashboardModule,
+  userModule,
+  linkModule,
+  workspaceProductModule,
+];
 
 async function capture(label, collector, runOperation) {
   collector.start();
@@ -584,46 +794,62 @@ function compareOperation(prisma6, prismaNext) {
     prisma6QueryCount: prisma6.queries.length,
     prismaNextQueryCount: prismaNext.queries.length,
     sameQueryCount: prisma6.queries.length === prismaNext.queries.length,
-    resultTypeShapeEqual: stableJson(prisma6ResultTypeShape) === stableJson(prismaNextResultTypeShape),
-    resultValueSummaryEqual: stableJson(prisma6.result) === stableJson(prismaNext.result),
+    resultTypeShapeEqual:
+      stableJson(prisma6ResultTypeShape) ===
+      stableJson(prismaNextResultTypeShape),
+    resultValueSummaryEqual:
+      stableJson(prisma6.result) === stableJson(prismaNext.result),
     prisma6ResultTypeShape,
     prismaNextResultTypeShape,
     sqlEqualByPosition: prisma6.queries.map((query, index) => ({
       index,
       equal:
         query.normalizedSql === prismaNext.queries[index]?.normalizedSql &&
-        stableJson(query.params) === stableJson(prismaNext.queries[index]?.params),
+        stableJson(query.params) ===
+          stableJson(prismaNext.queries[index]?.params),
     })),
   };
 }
 
-async function runModuleComparison(moduleDefinition, prisma6Context, prismaNextContext) {
+async function runModuleComparison(
+  moduleDefinition,
+  prisma6Context,
+  prismaNextContext,
+) {
   const operations = [];
 
   for (const operation of moduleDefinition.operations) {
     await operation.setup({ pool: prisma6Context.seedPool });
     await operation.setup({ pool: prismaNextContext.seedPool });
     const fixtureBefore = {
-      prisma6: await snapshotDashboardFixture(prisma6Context.seedPool),
-      prismaNext: await snapshotDashboardFixture(prismaNextContext.seedPool),
+      prisma6: await snapshotRuntimeFixture(prisma6Context.seedPool),
+      prismaNext: await snapshotRuntimeFixture(prismaNextContext.seedPool),
     };
 
     const prisma6 = await capture("prisma6", prisma6Context.collector, () =>
       operation.prisma6({ prisma: prisma6Context.client }),
     );
-    const prismaNext = await capture("prismaNext", prismaNextContext.collector, () =>
-      operation.prismaNext({ db: prismaNextContext.db }),
+    const prismaNext = await capture(
+      "prismaNext",
+      prismaNextContext.collector,
+      () => operation.prismaNext({ db: prismaNextContext.db }),
     );
     const fixtureAfter = {
-      prisma6: await snapshotDashboardFixture(prisma6Context.seedPool),
-      prismaNext: await snapshotDashboardFixture(prismaNextContext.seedPool),
+      prisma6: await snapshotRuntimeFixture(prisma6Context.seedPool),
+      prismaNext: await snapshotRuntimeFixture(prismaNextContext.seedPool),
     };
 
     operations.push({
       id: operation.id,
       kind: operation.kind,
-      fixtureBefore: compareSnapshots(fixtureBefore.prisma6, fixtureBefore.prismaNext),
-      fixtureAfter: compareSnapshots(fixtureAfter.prisma6, fixtureAfter.prismaNext),
+      fixtureBefore: compareSnapshots(
+        fixtureBefore.prisma6,
+        fixtureBefore.prismaNext,
+      ),
+      fixtureAfter: compareSnapshots(
+        fixtureAfter.prisma6,
+        fixtureAfter.prismaNext,
+      ),
       prisma6,
       prismaNext,
       comparison: compareOperation(prisma6, prismaNext),
@@ -641,7 +867,9 @@ async function main() {
   const suffix = `${process.pid}_${Date.now()}`;
   const prisma6Db = `dub_runtime_sql_p6_${suffix}`;
   const prismaNextDb = `dub_runtime_sql_pn_${suffix}`;
-  const prisma6AdminPool = new Pool({ connectionString: adminDatabaseUrlFor(prisma6RootDatabaseUrl) });
+  const prisma6AdminPool = new Pool({
+    connectionString: adminDatabaseUrlFor(prisma6RootDatabaseUrl),
+  });
   const prismaNextAdminPool = new Pool({
     connectionString: adminDatabaseUrlFor(prismaNextRootDatabaseUrl),
   });
@@ -658,12 +886,15 @@ async function main() {
     await createDatabase(prismaNextAdminPool, prismaNextDb);
 
     const prisma6Url = databaseUrlFor(prisma6RootDatabaseUrl, prisma6Db);
-    const prismaNextUrl = databaseUrlFor(prismaNextRootDatabaseUrl, prismaNextDb);
+    const prismaNextUrl = databaseUrlFor(
+      prismaNextRootDatabaseUrl,
+      prismaNextDb,
+    );
     prisma6SeedPool = new Pool({ connectionString: prisma6Url });
     prismaNextSeedPool = new Pool({ connectionString: prismaNextUrl });
 
-    await createMinimalDashboardSchema(prisma6SeedPool);
-    await createMinimalDashboardSchema(prismaNextSeedPool);
+    await createRuntimeComparisonSchema(prisma6SeedPool);
+    await createRuntimeComparisonSchema(prismaNextSeedPool);
 
     const prisma6Collector = new QueryCollector("prisma6");
     const prisma6Client = createPrisma6Client(prisma6Url, prisma6Collector);
@@ -675,6 +906,25 @@ async function main() {
     prismaNext = createPrismaNextClient(prismaNextUrl, prismaNextCollector);
     prismaNextRuntime = await prismaNext.connect();
 
+    const moduleReports = [];
+    for (const moduleDefinition of runtimeModules) {
+      moduleReports.push(
+        await runModuleComparison(
+          moduleDefinition,
+          {
+            client: prisma6,
+            collector: prisma6Collector,
+            seedPool: prisma6SeedPool,
+          },
+          {
+            db: prismaNext,
+            collector: prismaNextCollector,
+            seedPool: prismaNextSeedPool,
+          },
+        ),
+      );
+    }
+
     const report = {
       generatedAt: new Date().toISOString(),
       isolation: {
@@ -683,7 +933,9 @@ async function main() {
             ? "two-scratch-databases-on-one-postgres-root"
             : "two-scratch-databases-on-separate-postgres-roots",
         prisma6RootDatabaseUrl: describeDatabaseUrl(prisma6RootDatabaseUrl),
-        prismaNextRootDatabaseUrl: describeDatabaseUrl(prismaNextRootDatabaseUrl),
+        prismaNextRootDatabaseUrl: describeDatabaseUrl(
+          prismaNextRootDatabaseUrl,
+        ),
         prisma6Database: prisma6Db,
         prismaNextDatabase: prismaNextDb,
       },
@@ -697,28 +949,16 @@ async function main() {
         databaseState:
           "Record before/after fixture snapshots for both databases so write operations can be compared without either runtime influencing the other dataset.",
       },
-      modules: [
-        await runModuleComparison(
-          dashboardModule,
-          {
-            client: prisma6,
-            collector: prisma6Collector,
-            seedPool: prisma6SeedPool,
-          },
-          {
-            db: prismaNext,
-            collector: prismaNextCollector,
-            seedPool: prismaNextSeedPool,
-          },
-        ),
-      ],
+      modules: moduleReports,
     };
 
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, `${stableJson(report)}\n`);
 
     for (const moduleReport of report.modules) {
-      console.log(`${moduleReport.id}: ${moduleReport.operations.length} operations`);
+      console.log(
+        `${moduleReport.id}: ${moduleReport.operations.length} operations`,
+      );
       for (const operation of moduleReport.operations) {
         const { comparison } = operation;
         console.log(
@@ -739,7 +979,9 @@ async function main() {
     await prisma6SeedPool?.end().catch(() => undefined);
     await prismaNextSeedPool?.end().catch(() => undefined);
     await dropDatabase(prisma6AdminPool, prisma6Db).catch(() => undefined);
-    await dropDatabase(prismaNextAdminPool, prismaNextDb).catch(() => undefined);
+    await dropDatabase(prismaNextAdminPool, prismaNextDb).catch(
+      () => undefined,
+    );
     await prisma6AdminPool.end();
     await prismaNextAdminPool.end();
   }
