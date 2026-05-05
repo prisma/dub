@@ -364,7 +364,8 @@ async function createRuntimeComparisonSchema(pool) {
       "usage" integer not null default 0,
       "usageLimit" integer not null default 1000,
       "linksUsage" integer not null default 0,
-      "createdAt" timestamp(3) not null default current_timestamp
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null
     )
   `);
   await pool.query(`
@@ -705,7 +706,7 @@ async function resetRuntimeFixture(pool, options = {}) {
     ],
   );
   await pool.query(
-    'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
+    'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
     [
       fixtureValues.projectId,
       "Runtime SQL Project",
@@ -721,10 +722,11 @@ async function resetRuntimeFixture(pool, options = {}) {
       1000,
       1,
       new Date("2024-01-03T00:00:00.000Z"),
+      new Date("2024-01-03T00:00:00.000Z"),
     ],
   );
   await pool.query(
-    'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
+    'insert into "Project" ("id", "name", "slug", "logo", "defaultProgramId", "plan", "stripeId", "billingCycleStart", "totalLinks", "totalClicks", "usage", "usageLimit", "linksUsage", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
     [
       fixtureValues.programWorkspaceId,
       "Runtime SQL Program Workspace",
@@ -739,6 +741,7 @@ async function resetRuntimeFixture(pool, options = {}) {
       9,
       5000,
       0,
+      new Date("2024-01-04T00:00:00.000Z"),
       new Date("2024-01-04T00:00:00.000Z"),
     ],
   );
@@ -1504,6 +1507,198 @@ const analyticsModule = {
           sales: aggregate.sum("sales"),
           saleAmount: aggregate.sum("saleAmount"),
         })),
+    },
+  ],
+};
+
+const usageCounterModule = {
+  id: "usage-counter-runtime-module",
+  description:
+    "Module-sized comparison for click/link usage counter updates currently backed by direct Postgres writes.",
+  operations: [
+    {
+      id: "usage.read.workspace-webhook-limit",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.findUnique({
+          where: {
+            id: fixtureValues.projectId,
+          },
+          select: {
+            usage: true,
+            usageLimit: true,
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select("usage", "usageLimit")
+          .first(),
+    },
+    {
+      id: "usage.update.link-click-increment",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.link.update({
+          where: {
+            id: fixtureValues.linkId,
+          },
+          data: {
+            clicks: {
+              increment: 1,
+            },
+            lastClicked: new Date("2024-02-01T00:00:00.000Z"),
+          },
+          select: {
+            id: true,
+            clicks: true,
+            lastClicked: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: async ({ db }) => {
+        const link = await db.orm.Link.where({
+          id: fixtureValues.linkId,
+        })
+          .select("clicks")
+          .first();
+        return db.orm.Link.where({
+          id: fixtureValues.linkId,
+        })
+          .select("id", "clicks", "lastClicked", "updatedAt")
+          .update({
+            clicks: (link?.clicks ?? 0) + 1,
+            lastClicked: new Date("2024-02-01T00:00:00.000Z"),
+          });
+      },
+    },
+    {
+      id: "usage.update.workspace-clicks-increment",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.update({
+          where: {
+            id: fixtureValues.projectId,
+          },
+          data: {
+            usage: {
+              increment: 3,
+            },
+            totalClicks: {
+              increment: 3,
+            },
+          },
+          select: {
+            id: true,
+            usage: true,
+            totalClicks: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: async ({ db }) => {
+        const workspace = await db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select("usage", "totalClicks")
+          .first();
+        return db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select("id", "usage", "totalClicks", "updatedAt")
+          .update({
+            usage: (workspace?.usage ?? 0) + 3,
+            totalClicks: (workspace?.totalClicks ?? 0) + 3,
+          });
+      },
+    },
+    {
+      id: "usage.update.workspace-links-increment",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.update({
+          where: {
+            id: fixtureValues.projectId,
+          },
+          data: {
+            linksUsage: {
+              increment: 2,
+            },
+            totalLinks: {
+              increment: 2,
+            },
+          },
+          select: {
+            id: true,
+            linksUsage: true,
+            totalLinks: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: async ({ db }) => {
+        const workspace = await db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select("linksUsage", "totalLinks")
+          .first();
+        return db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select("id", "linksUsage", "totalLinks", "updatedAt")
+          .update({
+            linksUsage: (workspace?.linksUsage ?? 0) + 2,
+            totalLinks: (workspace?.totalLinks ?? 0) + 2,
+          });
+      },
+    },
+    {
+      id: "usage.update.program-enrollment-clicks-increment",
+      kind: "write",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.programEnrollment.update({
+          where: {
+            partnerId_programId: {
+              partnerId: fixtureValues.partnerId,
+              programId: fixtureValues.programId,
+            },
+          },
+          data: {
+            totalClicks: {
+              increment: 1,
+            },
+          },
+          select: {
+            id: true,
+            totalClicks: true,
+            updatedAt: true,
+          },
+        }),
+      prismaNext: async ({ db }) => {
+        const enrollment = await db.orm.ProgramEnrollment.where({
+          partnerId: fixtureValues.partnerId,
+          programId: fixtureValues.programId,
+        })
+          .select("totalClicks")
+          .first();
+        return db.orm.ProgramEnrollment.where({
+          partnerId: fixtureValues.partnerId,
+          programId: fixtureValues.programId,
+        })
+          .select("id", "totalClicks", "updatedAt")
+          .update({
+            totalClicks: (enrollment?.totalClicks ?? 0) + 1,
+          });
+      },
     },
   ],
 };
@@ -2663,6 +2858,7 @@ const runtimeModules = [
   linkModule,
   edgeLinkModule,
   analyticsModule,
+  usageCounterModule,
   workspaceProductModule,
   workspaceModule,
   edgeWorkspaceModule,

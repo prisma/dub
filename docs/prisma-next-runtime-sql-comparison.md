@@ -14,6 +14,8 @@ Current modules:
   `domain/key` with webhook ids.
 - `analytics-runtime-module`: all-time link analytics aggregates for the raw
   shortcut in `getAnalytics`.
+- `usage-counter-runtime-module`: link, workspace, and program-enrollment
+  usage counter reads and writes.
 - `workspace-product-runtime-module`: workspace product resolution from
   `Project.defaultProgramId`.
 - `workspace-runtime-module`: workspace fetchers with membership metadata.
@@ -45,6 +47,14 @@ Known visible result-type differences:
 - `program-enrollment.read.by-partner-program`: Prisma 6 returns
   `ProgramEnrollment.totalCommissions` as `bigint`; Prisma Next currently
   returns the selected `bigint` column as `string`.
+
+Tracked write-query differences:
+
+- Counter increments are not equivalent through the current Prisma Next
+  high-level ORM. Prisma 6 emits atomic `SET field = field + $n` updates and
+  writes `updatedAt`; the Prisma Next high-level fallback currently reads the
+  current value first, writes the computed scalar value, and leaves `updatedAt`
+  unchanged.
 
 ## Runtime Capture
 
