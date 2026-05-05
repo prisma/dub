@@ -46,6 +46,52 @@ const fixtureValues = {
   webhookId: "webhook_runtime_sql",
 };
 
+const edgeLinkScalarFields = [
+  "id",
+  "domain",
+  "key",
+  "url",
+  "shortLink",
+  "proxy",
+  "title",
+  "description",
+  "image",
+  "video",
+  "rewrite",
+  "password",
+  "expiresAt",
+  "ios",
+  "android",
+  "geo",
+  "projectId",
+  "publicStats",
+  "expiredUrl",
+  "createdAt",
+  "trackConversion",
+  "programId",
+  "partnerId",
+];
+
+const edgeWorkspaceScalarFields = [
+  "id",
+  "name",
+  "slug",
+  "logo",
+  "defaultProgramId",
+  "plan",
+  "stripeId",
+  "billingCycleStart",
+  "totalLinks",
+  "totalClicks",
+  "usage",
+  "usageLimit",
+  "linksUsage",
+  "createdAt",
+];
+
+const selectFields = (fields) =>
+  Object.fromEntries(fields.map((field) => [field, true]));
+
 const quoteIdent = (value) => `"${value.replace(/"/g, '""')}"`;
 
 const databaseUrlFor = (rootDatabaseUrl, databaseName) => {
@@ -328,14 +374,41 @@ async function createRuntimeComparisonSchema(pool) {
       "key" text not null,
       "url" text not null,
       "shortLink" varchar(400),
+      "archived" boolean not null default false,
+      "expiresAt" timestamp(3),
+      "expiredUrl" text,
+      "disabledAt" timestamp(3),
+      "password" text,
+      "trackConversion" boolean not null default false,
+      "proxy" boolean not null default false,
+      "title" text,
+      "description" varchar(280),
+      "image" text,
+      "video" text,
+      "rewrite" boolean not null default false,
+      "ios" text,
+      "android" text,
+      "geo" jsonb,
       "folderId" text,
       "projectId" text,
       "userId" text,
       "programId" text,
       "partnerId" text,
+      "externalId" text,
+      "tenantId" text,
       "publicStats" boolean not null default false,
       "clicks" integer not null default 0,
+      "leads" integer not null default 0,
+      "conversions" integer not null default 0,
+      "sales" integer not null default 0,
+      "saleAmount" bigint not null default 0,
       "lastClicked" timestamp(3),
+      "lastLeadAt" timestamp(3),
+      "lastConversionAt" timestamp(3),
+      "createdAt" timestamp(3) not null default current_timestamp,
+      "updatedAt" timestamp(3) not null,
+      "comments" text,
+      "partnerGroupDefaultLinkId" text,
       unique ("shortLink"),
       unique ("domain", "key")
     )
@@ -762,20 +835,38 @@ async function resetRuntimeFixture(pool, options = {}) {
     ],
   );
   await pool.query(
-    'insert into "Link" ("id", "domain", "key", "url", "shortLink", "folderId", "projectId", "userId", "programId", "partnerId", "publicStats", "clicks") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+    'insert into "Link" ("id", "domain", "key", "url", "shortLink", "proxy", "title", "description", "image", "video", "rewrite", "password", "expiresAt", "ios", "android", "geo", "folderId", "projectId", "userId", "programId", "partnerId", "publicStats", "trackConversion", "clicks", "leads", "conversions", "sales", "saleAmount", "createdAt", "updatedAt") values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)',
     [
       fixtureValues.linkId,
       "dub.sh",
       "runtime-sql",
       "https://example.com/runtime-sql",
       "https://dub.sh/runtime-sql",
+      false,
+      "Runtime SQL Link",
+      "Link used by runtime SQL comparisons",
+      "https://example.com/link.png",
+      null,
+      false,
+      null,
+      null,
+      null,
+      null,
+      JSON.stringify({ US: "https://example.com/us" }),
       fixtureValues.folderId,
       fixtureValues.projectId,
       fixtureValues.userId,
       fixtureValues.programId,
       fixtureValues.partnerId,
       false,
+      true,
       5,
+      2,
+      1,
+      1,
+      "5000",
+      new Date("2024-01-05T03:00:00.000Z"),
+      new Date("2024-01-05T03:00:00.000Z"),
     ],
   );
   await pool.query(
@@ -1281,6 +1372,142 @@ const linkModule = {
   ],
 };
 
+const edgeLinkModule = {
+  id: "edge-link-runtime-module",
+  description:
+    "Module-sized comparison for edge link reads currently backed by direct Postgres queries.",
+  operations: [
+    {
+      id: "edge-link.read.by-shortlink",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.link.findUnique({
+          where: {
+            shortLink: "https://dub.sh/runtime-sql",
+          },
+          select: selectFields(edgeLinkScalarFields),
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Link.where({
+          shortLink: "https://dub.sh/runtime-sql",
+        })
+          .select(...edgeLinkScalarFields)
+          .first(),
+    },
+    {
+      id: "edge-link.read.by-domain-key-with-webhooks",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.link.findUnique({
+          where: {
+            domain_key: {
+              domain: "dub.sh",
+              key: "runtime-sql",
+            },
+          },
+          select: {
+            ...selectFields(edgeLinkScalarFields),
+            webhooks: {
+              select: {
+                webhookId: true,
+              },
+              orderBy: {
+                webhookId: "asc",
+              },
+            },
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Link.where({
+          domain: "dub.sh",
+          key: "runtime-sql",
+        })
+          .select(...edgeLinkScalarFields)
+          .include("webhooks", (webhooks) =>
+            webhooks
+              .select("webhookId")
+              .orderBy((webhook) => webhook.webhookId.asc()),
+          )
+          .first(),
+    },
+  ],
+};
+
+const analyticsModule = {
+  id: "analytics-runtime-module",
+  description:
+    "Module-sized comparison for the all-time link analytics aggregate shortcut.",
+  operations: [
+    {
+      id: "analytics.read.all-time-clicks-for-link",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const result = await prisma.link.aggregate({
+          where: {
+            id: {
+              in: [fixtureValues.linkId],
+            },
+          },
+          _sum: {
+            clicks: true,
+          },
+        });
+        return {
+          clicks: result._sum.clicks ?? 0,
+        };
+      },
+      prismaNext: ({ db }) =>
+        db.orm.Link.where((link) =>
+          link.id.in([fixtureValues.linkId]),
+        ).aggregate((aggregate) => ({
+          clicks: aggregate.sum("clicks"),
+        })),
+    },
+    {
+      id: "analytics.read.all-time-composite-for-link",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: async ({ prisma }) => {
+        const result = await prisma.link.aggregate({
+          where: {
+            id: {
+              in: [fixtureValues.linkId],
+            },
+          },
+          _sum: {
+            clicks: true,
+            leads: true,
+            sales: true,
+            saleAmount: true,
+          },
+        });
+        return {
+          clicks: result._sum.clicks ?? 0,
+          leads: result._sum.leads ?? 0,
+          sales: result._sum.sales ?? 0,
+          saleAmount: result._sum.saleAmount ?? 0n,
+        };
+      },
+      prismaNext: ({ db }) =>
+        db.orm.Link.where((link) =>
+          link.id.in([fixtureValues.linkId]),
+        ).aggregate((aggregate) => ({
+          clicks: aggregate.sum("clicks"),
+          leads: aggregate.sum("leads"),
+          sales: aggregate.sum("sales"),
+          saleAmount: aggregate.sum("saleAmount"),
+        })),
+    },
+  ],
+};
+
 const workspaceProductModule = {
   id: "workspace-product-runtime-module",
   description:
@@ -1410,6 +1637,65 @@ const workspaceModule = {
           )
           .include("users", (users) =>
             users.where({ userId: fixtureValues.userId }).select("role"),
+          )
+          .first(),
+    },
+  ],
+};
+
+const edgeWorkspaceModule = {
+  id: "edge-workspace-runtime-module",
+  description:
+    "Module-sized comparison for edge workspace reads currently backed by direct Postgres queries.",
+  operations: [
+    {
+      id: "edge-workspace.read.by-id",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.findUnique({
+          where: {
+            id: fixtureValues.projectId,
+          },
+          select: selectFields(edgeWorkspaceScalarFields),
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select(...edgeWorkspaceScalarFields)
+          .first(),
+    },
+    {
+      id: "edge-workspace.read.by-id-with-domains",
+      kind: "read",
+      setup: ({ pool }) =>
+        resetRuntimeFixture(pool, { includeDashboard: false }),
+      prisma6: ({ prisma }) =>
+        prisma.project.findUnique({
+          where: {
+            id: fixtureValues.projectId,
+          },
+          select: {
+            ...selectFields(edgeWorkspaceScalarFields),
+            domains: {
+              select: {
+                slug: true,
+              },
+              orderBy: {
+                slug: "asc",
+              },
+            },
+          },
+        }),
+      prismaNext: ({ db }) =>
+        db.orm.Project.where({
+          id: fixtureValues.projectId,
+        })
+          .select(...edgeWorkspaceScalarFields)
+          .include("domains", (domains) =>
+            domains.select("slug").orderBy((domain) => domain.slug.asc()),
           )
           .first(),
     },
@@ -2375,8 +2661,11 @@ const runtimeModules = [
   dashboardModule,
   userModule,
   linkModule,
+  edgeLinkModule,
+  analyticsModule,
   workspaceProductModule,
   workspaceModule,
+  edgeWorkspaceModule,
   folderModule,
   integrationModule,
   tagModule,

@@ -10,9 +10,15 @@ Current modules:
 - `user-runtime-module`: user existence lookups by `User.id`.
 - `link-runtime-module`: short-link existence lookups by the `Link.domain/key`
   compound identity.
+- `edge-link-runtime-module`: edge link reads by `shortLink` and by
+  `domain/key` with webhook ids.
+- `analytics-runtime-module`: all-time link analytics aggregates for the raw
+  shortcut in `getAnalytics`.
 - `workspace-product-runtime-module`: workspace product resolution from
   `Project.defaultProgramId`.
 - `workspace-runtime-module`: workspace fetchers with membership metadata.
+- `edge-workspace-runtime-module`: edge workspace reads by id, with and
+  without domain slugs.
 - `folder-runtime-module`: folder access lookups with filtered `FolderUser`
   includes.
 - `integration-runtime-module`: verified integrations installed in a workspace.
@@ -30,6 +36,15 @@ Current modules:
 - `program-enrollment-runtime-module`: program enrollment compound-key reads
   and partner includes.
 - `customer-runtime-module`: customer cursor and list reads.
+
+Known visible result-type differences:
+
+- `analytics.read.all-time-composite-for-link`: Prisma 6 returns
+  `Link.saleAmount` aggregate sums as `bigint`; Prisma Next currently returns
+  the same safe value as `number`.
+- `program-enrollment.read.by-partner-program`: Prisma 6 returns
+  `ProgramEnrollment.totalCommissions` as `bigint`; Prisma Next currently
+  returns the selected `bigint` column as `string`.
 
 ## Runtime Capture
 
