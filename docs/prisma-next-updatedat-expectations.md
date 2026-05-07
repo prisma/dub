@@ -1,13 +1,14 @@
-# Prisma Next `@updatedAt` Expectations
+# Prisma Next `temporal.updatedAt()` Expectations
 
-This document describes the `@updatedAt` behavior I would expect Prisma Next to
-match when porting Dub from Prisma 6 Client semantics.
+This document describes the `temporal.updatedAt()` behavior I would expect
+Prisma Next to match when porting Dub from Prisma 6 Client semantics.
 
-The short version: `@updatedAt` is an application-side mutation default. It is
-not a database default, trigger, generated column, or migration-time DDL feature.
-For ORM writes, Prisma should populate it when the user omits it on create and
-on non-empty update mutations. If the user supplies an explicit value, that
-value must win.
+The short version: Prisma 6 `@updatedAt` and Prisma Next
+`temporal.updatedAt()` should mean the same runtime thing. It is an
+application-side mutation default, not a database default, trigger, generated
+column, or migration-time DDL feature. For ORM writes, Prisma should populate
+it when the user omits it on create and on non-empty update mutations. If the
+user supplies an explicit value, that value must win.
 
 ## Baseline Schema
 
@@ -41,13 +42,15 @@ model Dashboard {
   showConversions Boolean @default(false)
 
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 }
 ```
 
 ## Contract And DDL Expectations
 
-`@updatedAt` should lower to execution metadata, not storage metadata.
+`temporal.updatedAt()` should lower to execution metadata without losing the
+storage semantics of the Prisma 6 field it replaces. For Dub, that means the
+column remains PostgreSQL `timestamp(3)`.
 
 Expected contract meaning:
 
@@ -339,38 +342,27 @@ timestamp should not leak into database state.
 
 ## Validation Expectations
 
-For this Dub port, the important supported shape is a required timestamp field:
+For this Dub port, the important supported shape is a required timestamp field
+with an update-time execution default:
 
 ```prisma
-updatedAt DateTime @updatedAt
-```
-
-or the named-type equivalent:
-
-```prisma
-types {
-  Timestamp3 = DateTime @db.Timestamp(3)
-}
-
-model Example {
-  updatedAt Timestamp3 @updatedAt
-}
+updatedAt temporal.updatedAt()
 ```
 
 Invalid or out-of-scope forms should fail during authoring or contract
 validation rather than at execution time:
 
-- non-timestamp fields, such as `String @updatedAt`
+- non-timestamp fields, such as `String @updatedAt` in Prisma 6 syntax
 - list fields
 - relation fields
-- `@updatedAt` with arguments
-- ambiguous combinations that also define a field default, such as
+- `@updatedAt` with arguments in Prisma 6 syntax
+- ambiguous Prisma 6 combinations that also define a field default, such as
   `DateTime @updatedAt @default(now())`
 
-Optional `DateTime? @updatedAt` is not needed for Dub. If Prisma Next chooses to
-support it later, it should still follow the same mutation-default semantics:
-omitted create/update values get a timestamp, explicit `null` must be specified
-and tested deliberately.
+Optional update-time fields are not needed for Dub. If Prisma Next chooses to
+support them later, they should still follow the same mutation-default
+semantics: omitted create/update values get a timestamp, explicit `null` must
+be specified and tested deliberately.
 
 ## Compatibility Tests To Add
 

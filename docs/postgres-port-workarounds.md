@@ -70,10 +70,9 @@ not be carried over exactly as-is, and the compatible alternative used instead.
   Production `@dub/prisma`, `@dub/prisma/client`, and Prisma 6.19.x Client
   behavior remain authoritative for the app.
 - The vendored `@prisma-next/*` tarballs were packed from
-  `~/work/prisma/prisma-next-clean` on branch `feat/idless-models` at commit
-  `8ff21273c6016d7fab875da72561da1089f537ee`. That branch includes the
-  `@updatedAt` runtime fix from
-  `146242c1ade74ec28d51a8c9c1b49a0ed8e895a0`.
+  `~/work/prisma/prisma-next-clean` on branch
+  `feat/created-updated-at-authoring` at commit
+  `93be243beea17c8f2a846445b6dd42ba35b7a30b`.
 - `packages/prisma/schema/contract.prisma` is the Prisma Next PSL contract.
   `contract.json` and `contract.d.ts` are emitted and committed next to it.
 - Prisma Next cannot express Prisma `relationMode = "prisma"` yet, so
@@ -83,11 +82,17 @@ not be carried over exactly as-is, and the compatible alternative used instead.
 - Prisma Next PSL does not preserve index sort direction today. Indexes that
   differ only by `sort: Asc` or `sort: Desc` are classified as expected DDL
   differences.
-- Prisma Next supports Dub's Prisma 6 no-id tables. The Next contract no
-  longer adds validation-only synthetic `id` fields for those models.
-- Current `next:ddl:compare` output is 234 expected differences and 0
-  unexpected differences: 168 Prisma Next foreign keys plus 66 FK-derived
-  helper indexes.
+- This Prisma Next build still rejects Dub's Prisma 6 no-id tables through the
+  PSL authoring path. The Next contract adds validation-only synthetic `id`
+  fields for those models while preserving their original unique constraints.
+- `temporal.updatedAt()` is the Prisma Next authoring form for Prisma 6
+  `@updatedAt`, but this build lowers it to PostgreSQL `timestamptz`. Dub's
+  Prisma 6 schema uses `timestamp(3)` for these columns, so the comparer tracks
+  that storage-type drift separately.
+- Current `next:ddl:compare` output is 296 expected differences and 0
+  unexpected differences: 168 Prisma Next foreign keys, 66 FK-derived helper
+  indexes, 18 synthetic-id differences, and 44 `updatedAt` timestamp-type
+  differences.
 - `next:emit` runs a post-emit normalizer for current Prisma Next JSON
   artifacts where `false` literal defaults and native JSON named-type
   parameters are accepted by the emitter but rejected by runtime validation.
@@ -96,6 +101,6 @@ not be carried over exactly as-is, and the compatible alternative used instead.
   PostgreSQL `timestamp` for those validation-only fields.
 - Prisma Next DDL is validation-only in this phase. It is not the
   authoritative migration source for Dub.
-- `@updatedAt` is intentionally part of the Prisma Next contract. It is
-  validated as an application-side create/update mutation default and is not
-  tracked as a workaround.
+- `temporal.updatedAt()` is intentionally part of the Prisma Next contract. It
+  is validated as an application-side create/update mutation default; the
+  remaining workaround is the PostgreSQL storage type it currently selects.

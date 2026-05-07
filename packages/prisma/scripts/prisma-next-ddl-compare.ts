@@ -11,6 +11,18 @@ type Snapshot = {
   readonly foreignKeys: Set<string>;
 };
 
+const syntheticIdTables = new Set([
+  "EmailVerificationToken",
+  "PartnerIndustryInterest",
+  "PartnerInvite",
+  "PartnerPreferredEarningStructure",
+  "PartnerSalesChannel",
+  "PasswordResetToken",
+  "ProgramCategory",
+  "ProjectInvite",
+  "VerificationToken",
+]);
+
 const quoteIdent = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
 const databaseUrlFor = (databaseName: string) => {
@@ -414,6 +426,60 @@ function classifyIndexSortDiffs(prisma6Only: string[], nextOnly: string[]) {
   return { expected, remainingPrisma6, remainingNext };
 }
 
+function classifyUpdatedAtTimestampTypeDiffs(prisma6Only: string[], nextOnly: string[]) {
+  const expected: string[] = [];
+  const consumedNext = new Set<number>();
+  const remainingPrisma6: string[] = [];
+
+  for (const item of prisma6Only) {
+    const match = item.match(/^column:([^:]+):updatedAt:timestamp without time zone:notNull:default=$/);
+    if (!match) {
+      remainingPrisma6.push(item);
+      continue;
+    }
+
+    const table = match[1]!;
+    const nextIndex = nextOnly.findIndex(
+      (candidate, index) =>
+        !consumedNext.has(index) &&
+        candidate === `column:${table}:updatedAt:timestamp with time zone:notNull:default=`,
+    );
+
+    if (nextIndex === -1) {
+      remainingPrisma6.push(item);
+      continue;
+    }
+
+    consumedNext.add(nextIndex);
+    expected.push(
+      `Prisma Next temporal.updatedAt() currently emits timestamptz while Prisma 6 uses timestamp(3): ${table}.updatedAt`,
+    );
+  }
+
+  const remainingNext = nextOnly.filter((_, index) => !consumedNext.has(index));
+  return { expected, remainingPrisma6, remainingNext };
+}
+
+function classifySyntheticIdDiffs(nextOnly: string[]) {
+  const expected: string[] = [];
+  const remainingNext: string[] = [];
+
+  for (const item of nextOnly) {
+    const columnMatch = item.match(/^column:([^:]+):id:/);
+    const primaryMatch = item.match(/^primary:([^(]+)\(id\)$/);
+    const table = columnMatch?.[1] ?? primaryMatch?.[1];
+
+    if (table && syntheticIdTables.has(table)) {
+      expected.push(`Prisma Next synthetic id for no-id Prisma 6 table: ${item}`);
+      continue;
+    }
+
+    remainingNext.push(item);
+  }
+
+  return { expected, remainingNext };
+}
+
 function classifyForeignKeyIndexDiffs(nextOnly: string[], foreignKeys: Set<string>) {
   const expected: string[] = [];
   const remainingNext: string[] = [];
@@ -463,20 +529,27 @@ async function main() {
     const prisma6Only = without(prisma6.items, next.items);
     const nextOnly = without(next.items, prisma6.items);
     const indexDiffs = classifyIndexSortDiffs(prisma6Only, nextOnly);
-    const foreignKeyIndexDiffs = classifyForeignKeyIndexDiffs(
+    const updatedAtTimestampDiffs = classifyUpdatedAtTimestampTypeDiffs(
+      indexDiffs.remainingPrisma6,
       indexDiffs.remainingNext,
+    );
+    const syntheticIdDiffs = classifySyntheticIdDiffs(updatedAtTimestampDiffs.remainingNext);
+    const foreignKeyIndexDiffs = classifyForeignKeyIndexDiffs(
+      syntheticIdDiffs.remainingNext,
       next.foreignKeys,
     );
 
     const expected = [
       ...indexDiffs.expected,
+      ...updatedAtTimestampDiffs.expected,
+      ...syntheticIdDiffs.expected,
       ...foreignKeyIndexDiffs.expected,
       ...without(next.foreignKeys, prisma6.foreignKeys).map(
         (fk) => `Prisma Next FK DDL expected while Prisma 6 uses relationMode=prisma: ${fk}`,
       ),
     ].sort();
     const unexpected = [
-      ...indexDiffs.remainingPrisma6.map((item) => `Only in Prisma 6: ${item}`),
+      ...updatedAtTimestampDiffs.remainingPrisma6.map((item) => `Only in Prisma 6: ${item}`),
       ...foreignKeyIndexDiffs.remainingNext.map((item) => `Only in Prisma Next: ${item}`),
       ...without(prisma6.foreignKeys, next.foreignKeys).map(
         (fk) => `Only in Prisma 6 foreign keys: ${fk}`,

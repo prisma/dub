@@ -55,8 +55,9 @@ Current modules:
   and partner includes.
 - `customer-runtime-module`: customer cursor and list reads.
 
-Latest run, using Prisma Next tarballs packed from `feat/idless-models` at
-`8ff21273c6016d7fab875da72561da1089f537ee` on 2026-05-05:
+Latest run, using Prisma Next tarballs packed from
+`feat/created-updated-at-authoring` at
+`93be243beea17c8f2a846445b6dd42ba35b7a30b` on 2026-05-07:
 
 - 27 modules, 72 operations: 49 reads and 23 writes.
 - Prisma 6 emitted 117 captured queries; Prisma Next emitted 103.
@@ -65,6 +66,13 @@ Latest run, using Prisma Next tarballs packed from `feat/idless-models` at
 - Result value summary equal: 35/72 operations.
 - Before fixture equal: 72/72 operations.
 - After fixture equal: 53/72 operations overall, and 4/23 write operations.
+- Query parameter kinds differed sharply: Prisma 6 sent no captured `Date`
+  parameters and represented timestamp writes as strings, while Prisma Next
+  sent 32 captured `Date` parameters.
+- The companion DDL compare found 296 expected differences and 0 unexpected
+  differences. The new category is 44 `updatedAt` column-type differences:
+  `temporal.updatedAt()` currently emits `timestamptz`, while Dub's Prisma 6
+  PostgreSQL schema uses `timestamp(3)`.
 
 Known visible result-type differences:
 
@@ -77,10 +85,10 @@ Known visible result-type differences:
 
 Tracked write-query differences:
 
-- `@updatedAt` now appears in Prisma Next create and non-empty update SQL for
-  the covered high-level ORM writes. Prisma 6 still sends generated timestamp
-  values as timestamp strings, while Prisma Next sends JavaScript `Date`
-  parameters to the driver.
+- `temporal.updatedAt()` now appears in Prisma Next create and non-empty
+  update SQL for the covered high-level ORM writes. Prisma 6 still sends
+  generated timestamp values as timestamp strings, while Prisma Next sends
+  JavaScript `Date` parameters to the driver.
 - Counter increments are not equivalent through the current Prisma Next
   high-level ORM. Prisma 6 emits atomic `SET field = field + $n` updates. The
   Prisma Next high-level fallback currently reads the current value first, then
@@ -107,7 +115,7 @@ Tracked write-query differences:
   usually matches, but raw fixture snapshots capture the resulting
   `timestamp(3)` state difference.
 - Date values still need follow-up. In the Europe/Rome run from
-  2026-05-05, many existing `timestamp(3)` reads differed by one hour in ORM
+  2026-05-07, many existing `timestamp(3)` reads differed by one hour in ORM
   results, and raw fixture snapshots for generated May 2026 timestamps differed
   by two hours because the process was in CEST. See
   `docs/prisma-next-date-value-expectations.md` for the expected Prisma 6
@@ -185,3 +193,10 @@ The classifier is intentionally conservative:
 
 The JSON report is written to
 `packages/prisma/.tmp/prisma-next-raw-sql-inventory.json`.
+
+Latest inventory:
+
+- Raw SQL execution sites: 41.
+- Prisma SQL fragments: 146.
+- Classification: 12 `orm-api`, 11 `query-builder-api`, 14
+  `not-currently-covered`, and 4 `manual-review`.

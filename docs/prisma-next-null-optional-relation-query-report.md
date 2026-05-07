@@ -38,7 +38,7 @@ model Dashboard {
   showConversions Boolean @default(false)
 
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   @@index([projectId])
   @@map("Dashboard")

@@ -3528,16 +3528,16 @@ packages:
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
   '@prisma-next/adapter-postgres@file:packages/prisma/vendor/prisma-next/prisma-next-adapter-postgres-0.0.1.tgz':
-    resolution: {integrity: sha512-qoVOoJs9dBYTxHY9BbvdWuP6UPtNIKClkH74RCnn1jWHzV76gNCqi++FtB60E1J2wprOE1aSNC8S/JqKgUoFkw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-adapter-postgres-0.0.1.tgz}
+    resolution: {integrity: sha512-MfcillIXHU2zOBiNug+ikmgTcJTXwbnloIv3FXUtnqWPSPbDJifsFfnaHu1BAb0D1xloMGIxg/OzDhCepXO/Lg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-adapter-postgres-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/cli@file:packages/prisma/vendor/prisma-next/prisma-next-cli-0.0.1.tgz':
-    resolution: {integrity: sha512-4QueObH/6Heg8E7v8V0la+0Fo7rJoFEGi03YeI/8Zs1lIZ6htaDXVekDb8isOF2rWF9wxAZgT0hsiVr7hemvbA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-cli-0.0.1.tgz}
+    resolution: {integrity: sha512-D7SoB9Gzi6JX1ET2aSfdPO7rTylpbVDd8PFhWDxEK8SC6Y4uFsZAf9a7igrl4uIVf33KJ8mvrdEgD1lLOY6KtA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-cli-0.0.1.tgz}
     version: 0.0.1
     hasBin: true
 
   '@prisma-next/config@file:packages/prisma/vendor/prisma-next/prisma-next-config-0.0.1.tgz':
-    resolution: {integrity: sha512-B42e24FJ/US6LzaKPz5ZD3cNadPgpMckgzIsonLy1AyTwn9FmSGR8V9ICbcIn7U34TeOe1YAG2TcKErh02F3kw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-config-0.0.1.tgz}
+    resolution: {integrity: sha512-sQAAZO2y8Cny09CUBP9gcypsNpEquJcHXk1pd4TdurffwWkyF0zbWxhk8SXepSaGzvVutpGmBd6E7y10xrjfqg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-config-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
@@ -3546,77 +3546,77 @@ packages:
     version: 0.0.1
 
   '@prisma-next/contract@file:packages/prisma/vendor/prisma-next/prisma-next-contract-0.0.1.tgz':
-    resolution: {integrity: sha512-bSc+BL7FfgkFMPd3eRQUisSmfmCH74imNBlwBqSbWlyS5287WOhNzTyYSVw9AvRu6UR9greAy54OSUx/he2PWA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-contract-0.0.1.tgz}
+    resolution: {integrity: sha512-dao8FufLm8Angu2yjUP2tJQFd0KNOvvQiXrBlj/k8MRiBtc9raIbIOsCHnkYsx9njdt6SGZFrtKQm7RURWj1UQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-contract-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/driver-postgres@file:packages/prisma/vendor/prisma-next/prisma-next-driver-postgres-0.0.1.tgz':
-    resolution: {integrity: sha512-aVCnL6YiFHgk0PnP/SKa/DOk6CKc+ZAWgYwmEVLtHZUH2fgaLM+fT9HgZve3US1RNZfoyqsO6/w0gr5RYJqgwg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-driver-postgres-0.0.1.tgz}
+    resolution: {integrity: sha512-8ASJeFDaBYuNaV/KU34L20IsXYNcq8g1aS+iTPBckej0cLVWSIXe5SaLmyByInIvtA6XY2R4se+kmvygMQrYJg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-driver-postgres-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/emitter@file:packages/prisma/vendor/prisma-next/prisma-next-emitter-0.0.1.tgz':
-    resolution: {integrity: sha512-xVY8RhUFBrqTZdp3tzw9uYfa5nr9PDRmmhv+th+d0e7raVyP3F36k9cKsvtImv3i2gkXCz9tNFc+cBIsSK2czQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-emitter-0.0.1.tgz}
+    resolution: {integrity: sha512-uf8jQSjnzzTvrZUoW1gLd7u2I1Xxo3vWEY6puVh2YiY6P29p9miUQz2Hqxli9L3fa1GlMio66g3QD9KYFeaDVg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-emitter-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/errors@file:packages/prisma/vendor/prisma-next/prisma-next-errors-0.0.1.tgz':
-    resolution: {integrity: sha512-M+fwwA/IcWCA8XYq8LuIxn5wC/QpYxydZ+fwdpAX2vnwMpkyocd+U0IWZhzvkIbWEg/FK0VY1cBf6czESiVEAQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-errors-0.0.1.tgz}
+    resolution: {integrity: sha512-+LFbDTHhdvwPOzjT07/HMwjCLHfNWJYGot5cr2y7rq7XlbY9Uy3xQPOV2OXJdsthR785akYCniCv1j58s3ETew==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-errors-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/family-sql@file:packages/prisma/vendor/prisma-next/prisma-next-family-sql-0.0.1.tgz':
-    resolution: {integrity: sha512-bP7c0etceA9yVi1TILhVdUsbUJiT46STydJFg/myroUPgg3jBvWE/oBK529TjEK8UBum4fHA6QVJe0GGjpcBDg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-family-sql-0.0.1.tgz}
+    resolution: {integrity: sha512-XAnp/YnjFz8bxE0O/qNHbTboq11Ay3hioocs68f4EkXUQ6x3JHycb6xR4T2pQ9pL9y7ANi6yN+us3UmxLnEdRw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-family-sql-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/framework-components@file:packages/prisma/vendor/prisma-next/prisma-next-framework-components-0.0.1.tgz':
-    resolution: {integrity: sha512-TJOIhwiTgm59EuglSzgYgDrT6VxQhTNL6P+Pf33jKME6exC3+FUyKnNWkB6c44ZBi/aDWQm3csG2wtuaNaoumA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-framework-components-0.0.1.tgz}
+    resolution: {integrity: sha512-FFks9YMDB6ThOqqjic966lNILiFkA0QX9BuITFUttAbpMYU9r8CT4VeOqa2Fv8fGxN5jcyx8bxwx4BAk486VSA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-framework-components-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/ids@file:packages/prisma/vendor/prisma-next/prisma-next-ids-0.0.1.tgz':
-    resolution: {integrity: sha512-mbNaUGDcigCINpq1jC0lnapwiw9PAbxM6x4ydBGKCGD5785qZw2lt1x1jdJBf2/9EnLHZnnsVOl12eb4RNIrPw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-ids-0.0.1.tgz}
+    resolution: {integrity: sha512-krc6nDRk1ASdXbCelEf96cDSoNvqi6ZlIjvXnqPuPI9clRjzQcSQwpHBJf85Ptue07qTfRbNFTY50hb8Ll3eDg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-ids-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/migration-tools@file:packages/prisma/vendor/prisma-next/prisma-next-migration-tools-0.0.1.tgz':
-    resolution: {integrity: sha512-ryhAUvvWKvhIO3EdFCZEJqtmYd7etCoQMt8k013awATZwL85AbM1ZBIVIDofw4MsBGqSnCk7O0MLlxuwxeNU2Q==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-migration-tools-0.0.1.tgz}
+    resolution: {integrity: sha512-L7e9TJInRp2h/ck227vGcVJ27RJzl1rZI+IMZKJqpJjzPP2Nheks2fSaAMUaxkF31Qn7lT9sMqQ3KNxFEgOrng==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-migration-tools-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/operations@file:packages/prisma/vendor/prisma-next/prisma-next-operations-0.0.1.tgz':
-    resolution: {integrity: sha512-QeMteDpw4V1uDzBQIa8n06YfX9xI93TLMREUF715y5gIxMKApAP/xH3UPjab3gTMEDUpHm3rNq/Ys96U72H6Kg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-operations-0.0.1.tgz}
+    resolution: {integrity: sha512-23Pdu+N93MSY2+2VAR+rdFfQexWs4SkBSo2LbWLvN0FsAOpTka5DJjQ4Z/04mTKeT7Nf7ylksbRPnFJRWaaaHg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-operations-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/postgres@file:packages/prisma/vendor/prisma-next/prisma-next-postgres-0.0.1.tgz':
-    resolution: {integrity: sha512-MjDZGp8eDihdre2OmomTAGymLYvq9MxVXElPkkhHK+zK5UmlOV0oJ9JEtEWtmvVITVKhzT9BsoNCVE3wuIvHtQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-postgres-0.0.1.tgz}
+    resolution: {integrity: sha512-/TN9nN7cF9siTaCCYl16W4bmneK9oCNPnmBatreQ936mH8lzIIEDnndkCJ6bQNHTsUe0PPVtPhWi+C5OuSo63w==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-postgres-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/psl-parser@file:packages/prisma/vendor/prisma-next/prisma-next-psl-parser-0.0.1.tgz':
-    resolution: {integrity: sha512-F8jbiIxo8FTx+HSG8PjRI5Bgz89aoS4NWYLCt37uigliZlQDo6lxGXKef2aNyl0IHo1qz+oSGe3LI3m58yqGSw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-psl-parser-0.0.1.tgz}
+    resolution: {integrity: sha512-419+Nj4rQlS1ZrnFa4GCnqnyPiA4oj35hVTqiV0kTN6P2tpJ6607iCxR1zyW5R63lzleSSw0dnYOdwgoWmF7PA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-psl-parser-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/psl-printer@file:packages/prisma/vendor/prisma-next/prisma-next-psl-printer-0.0.1.tgz':
-    resolution: {integrity: sha512-toMO8Y+YJLUHrkjOh+1iz2ejsqJWDc2fXQeifuaWayMB5Y4h5Wzj32cs+vzVTCeLjE04V2bvG0hLMpu1eWAzNw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-psl-printer-0.0.1.tgz}
+    resolution: {integrity: sha512-Ioy0teSXrHCyHTbJ8T2N53v+4O5d7xhPIKa+CSm5eQLh7fhMYHaJspceWfLlZRegw01fxU5TSot3DGdioNJjcQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-psl-printer-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-builder@file:packages/prisma/vendor/prisma-next/prisma-next-sql-builder-0.0.1.tgz':
-    resolution: {integrity: sha512-9ni06aRMgayLpN37O6AmdaDLDZH9EJ1J71J83508xOFnvietrWjzDvlfG5syykA0r4+2c4nCmkpbFAWCIkgNyQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-builder-0.0.1.tgz}
+    resolution: {integrity: sha512-ml0pqXYGaWAA5lUa0TXb1rdJpc5LKOyt+GVP2a1HoZuThNy/Dss4UDgaVHUf8YHSJNTbw0qPTvI9ihpwPChT9w==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-builder-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/sql-contract-emitter@file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-emitter-0.0.1.tgz':
-    resolution: {integrity: sha512-Rcu2Br7s9eaV/PPYqADYK/aMf2hxeTD1s19L7fHXx8gK4taQDhkbVJwHYN32ua8TBshqIcLrFB338KoYZJbvTQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-emitter-0.0.1.tgz}
+    resolution: {integrity: sha512-bc5OUMqiD/kSCZYt5tz7XJT1uHqG3BzzWRmAPR+0+ru2S5sy4bCxbSzjG8jWXgn5UEv/KuGHq7rW9RjgV3RO5A==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-emitter-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-contract-psl@file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-psl-0.0.1.tgz':
-    resolution: {integrity: sha512-1xBWuWfUiRCiQh33LJyIEbib4+5MRJxyip69ocXGaEnZuV3S2IaSLCnDfdeFGP2lPnY414dsA7NkZ2wXJ6/QAg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-psl-0.0.1.tgz}
+    resolution: {integrity: sha512-t4+2SMTAAv4tkrTsSkH7euWU03aQhayyQUxUpDPoF50+F2BHQ0Hqxiec880q3xQPSJyBwCvbmgna/CJ7wooHGQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-psl-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-contract-ts@file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-ts-0.0.1.tgz':
-    resolution: {integrity: sha512-xKZNch40AhQZa0f7N33XKK4X4Gf3kqHfoRu9Fpmt0NEVpORxRPT2XxSiQH5SBmM172WfB1ADkAp1VwEMABoX2A==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-ts-0.0.1.tgz}
+    resolution: {integrity: sha512-JZD46RnzYff+f0xjc/yY5Y7flUyrRbbAXUZywibJhvUSKizRBdP3yBzPpe4sIURYm9xcnzGvp4BbMzLZsQN0iQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-ts-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-contract@file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-0.0.1.tgz':
-    resolution: {integrity: sha512-lA2AJ65KIpPTBCef6EUVaV5JPYc+vmN5TMORti1HuM1xSHhwqaJfZJ9no+o5NOrD8N0T/oySioOpJ/gdQAFksA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-0.0.1.tgz}
+    resolution: {integrity: sha512-dC4oTzZsef+94TWkjGh1pkynuIhkTKBvNIKqDM1HxcnOZjfDGoyvTjjCP+H3zQ8H55SYQZVKrk0Fov/Azio0hA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-errors@file:packages/prisma/vendor/prisma-next/prisma-next-sql-errors-0.0.1.tgz':
@@ -3625,30 +3625,30 @@ packages:
     engines: {node: '>=20'}
 
   '@prisma-next/sql-operations@file:packages/prisma/vendor/prisma-next/prisma-next-sql-operations-0.0.1.tgz':
-    resolution: {integrity: sha512-NeFdTdDZIxNdA7870OLopP62/0MRZzPpyyib5tpnkon405S566AK8AaoLMiEEfcXT/gqqtxBZSLwNcH4RhUBFw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-operations-0.0.1.tgz}
+    resolution: {integrity: sha512-jyiAyGRkNa27YkHTCdMEUUm47MJyZrxz3ggVg6K/9PHVlLa/2CMltGkFMlIP2SVTSWxxdMl1TpNpV069jV8hOQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-operations-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/sql-orm-client@file:packages/prisma/vendor/prisma-next/prisma-next-sql-orm-client-0.0.1.tgz':
-    resolution: {integrity: sha512-pmqHmzQHBZfMV1jvF7XLzuzfVh/qBUYMYGHxvFxALSxHwd9UEkZL9JViF7nk2izWMzVrcohWeQ2e/CradJnppg==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-orm-client-0.0.1.tgz}
+    resolution: {integrity: sha512-LDFQkHwGWlm+BLh4tnCLQA3okg9nmEfVOU2PvtRA//WfVwbcXxJkahVELsbDmbPpHMD/xov3R4tIyfq5zSKt3Q==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-orm-client-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/sql-relational-core@file:packages/prisma/vendor/prisma-next/prisma-next-sql-relational-core-0.0.1.tgz':
-    resolution: {integrity: sha512-htSUjFoGxnMb5Zioll6t53zaO1WeTJ0DEpPhLxK0AxQQoIosZooJmte7dbjUvFkvxmAppyR/dVd1zVuqwD4+aQ==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-relational-core-0.0.1.tgz}
+    resolution: {integrity: sha512-+ZgrrQqbUb0TXeR8cTLvqURylRqrHW1Om69BdgORsvg9LR56SDiGQKhhHZEuWf1sXcGeS06rxTl10wqDBOqy7Q==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-relational-core-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-runtime@file:packages/prisma/vendor/prisma-next/prisma-next-sql-runtime-0.0.1.tgz':
-    resolution: {integrity: sha512-mWAyWB77oTaj4LJUXi5KnX3XxDye74RmT9lQip5hgg06QK16hgSiFYg4uTL7bub6Wjv62ZIDAJxKLuCQWypt/w==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-runtime-0.0.1.tgz}
+    resolution: {integrity: sha512-mPTew85mXFXNJuORvpcLSzIaB/FOcmuATqlBIDxhEauV6L41lc6Phro3+THWbL/Ost6EPhPAWuzRdNAsQrsoAw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-runtime-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/sql-schema-ir@file:packages/prisma/vendor/prisma-next/prisma-next-sql-schema-ir-0.0.1.tgz':
-    resolution: {integrity: sha512-AOT0cEFoF89AHGef7dWkEKBHgoOaCK7OU5GQQSA7RnAa/L4gaulA9iZXMigcfZCNmeiR8NCfVgOe4N45Gs4iwA==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-schema-ir-0.0.1.tgz}
+    resolution: {integrity: sha512-evba0isG95mtoSzLTeYaMo2ui1x8qXV0CAuR9OawMh8ENtRxjHlQA1NIP7Q4XaAkvi96eSsnQi3ZxDqOO25tAw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-sql-schema-ir-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 
   '@prisma-next/target-postgres@file:packages/prisma/vendor/prisma-next/prisma-next-target-postgres-0.0.1.tgz':
-    resolution: {integrity: sha512-WDIKnyi4CmY5etXBQ+P/buKqSVfgYCOn6EvnqpwCRVja4J1dd3b7fmztsX/lUrofRbkxKptJ+oeB8a7uFJTHIw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-target-postgres-0.0.1.tgz}
+    resolution: {integrity: sha512-/+XT8GsGJrpWh/FIsX3lgf6CRhGF53M4+G3E1mun6GxMYJPXcGWYtuBlsY/+juowBK/BIgNDDLdvlwYGUWVedw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-target-postgres-0.0.1.tgz}
     version: 0.0.1
 
   '@prisma-next/ts-render@file:packages/prisma/vendor/prisma-next/prisma-next-ts-render-0.0.1.tgz':
@@ -3657,7 +3657,7 @@ packages:
     engines: {node: '>=20'}
 
   '@prisma-next/utils@file:packages/prisma/vendor/prisma-next/prisma-next-utils-0.0.1.tgz':
-    resolution: {integrity: sha512-orgH7ENfX+DVdCSdO/ORv4Cai0FRJT1q+9t+JRI/DJ0CgmyseBgIPxVs7FklD/Ezrere777Gm53EF/CbnRhBQw==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-utils-0.0.1.tgz}
+    resolution: {integrity: sha512-Nioe6RALGr8ejcqYoh6kqrnrWCu1reIpbtmbLjRHBsHZs6ASkX2biUpyEeH4ta2ZVt5ZZdb88FpVwLmJGW9k3w==, tarball: file:packages/prisma/vendor/prisma-next/prisma-next-utils-0.0.1.tgz}
     version: 0.0.1
     engines: {node: '>=20'}
 

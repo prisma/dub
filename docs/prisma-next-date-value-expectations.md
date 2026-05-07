@@ -27,7 +27,7 @@ updatedAt DateTime @updatedAt @db.Timestamp(3)
 ```
 
 It also applies to date values used in `where` filters, ordering, explicit
-mutation data, `@default(now())`, and `@updatedAt`.
+mutation data, `@default(now())`, and Prisma Next `temporal.updatedAt()`.
 
 It does not imply that JSON string values should become `Date` instances. If a
 date-like value is stored inside a JSON column, it remains JSON data unless the
@@ -132,10 +132,10 @@ This matters for `timestamp without time zone` columns. If encode and decode use
 different timezone assumptions, equality and range filters can appear correct in
 one local timezone and fail in another.
 
-## Defaults And `@updatedAt`
+## Defaults And `temporal.updatedAt()`
 
-`@default(now())` and `@updatedAt` should return `Date` instances through normal
-ORM reads and mutation returns.
+`@default(now())` and `temporal.updatedAt()` should return `Date` instances
+through normal ORM reads and mutation returns.
 
 For generated values:
 
@@ -207,8 +207,8 @@ Prisma Next should have focused PostgreSQL tests for these cases:
    that Prisma 6 and Prisma Next match the same rows.
 7. Verify `@default(now())` values return `Date` instances and do not shift when
    read back.
-8. Verify `@updatedAt` values return `Date` instances, explicit values are
-   preserved, and generated values do not shift when read back.
+8. Verify `temporal.updatedAt()` values return `Date` instances, explicit
+   values are preserved, and generated values do not shift when read back.
 9. Repeat the relevant tests for a `timestamptz` column to keep instant semantics
    separate from `timestamp without time zone` compatibility.
 

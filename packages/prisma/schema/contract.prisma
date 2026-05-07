@@ -150,7 +150,7 @@ model ProgramApplication {
   rejectionNote   String?
   reviewedAt      Timestamp3?
   createdAt       Timestamp3                           @default(now())
-  updatedAt       Timestamp3                           @updatedAt
+  updatedAt temporal.updatedAt()
 
   program                  Program                   @relation(fields: [programId], references: [id])
   partnerGroup             PartnerGroup?             @relation(fields: [groupId], references: [id])
@@ -250,7 +250,7 @@ model Bounty {
   socialMetricsLastSyncedAt Timestamp3?
   archivedAt                Timestamp3?
   createdAt                 Timestamp3                   @default(now())
-  updatedAt                 Timestamp3                   @updatedAt
+  updatedAt temporal.updatedAt()
 
   submissions BountySubmission[]
   groups      BountyGroup[]
@@ -297,7 +297,7 @@ model BountySubmission {
   completedAt               Timestamp3?
   reviewedAt                Timestamp3?
   createdAt                 Timestamp3                         @default(now())
-  updatedAt                 Timestamp3                         @updatedAt
+  updatedAt temporal.updatedAt()
 
   bounty            Bounty             @relation(fields: [bountyId], references: [id], onDelete: Cascade)
   partner           Partner            @relation(fields: [partnerId], references: [id], onDelete: Cascade)
@@ -349,7 +349,7 @@ model Campaign {
   bodyJson        JsonData
   scheduledAt     Timestamp3?
   createdAt       Timestamp3            @default(now())
-  updatedAt       Timestamp3            @updatedAt
+  updatedAt temporal.updatedAt()
   program         Program             @relation(fields: [programId], references: [id])
   workflow        Workflow?           @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   groups          CampaignGroup[]
@@ -381,7 +381,7 @@ model PartnerComment {
   userId    String
   text      String
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
   partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
@@ -431,7 +431,7 @@ model Commission {
   status      CommissionStatus @default("pending")
   userId      String? // user who created the manual commission
   createdAt   Timestamp3         @default(now())
-  updatedAt   Timestamp3         @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program           @relation(fields: [programId], references: [id])
   partner           Partner           @relation(fields: [partnerId], references: [id])
@@ -483,7 +483,7 @@ model Customer {
   partnerId String?
 
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   project           Project            @relation(fields: [projectId], references: [id])
   link              Link?              @relation(fields: [linkId], references: [id])
@@ -532,7 +532,7 @@ model Dashboard {
   showConversions Boolean @default(false)
 
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   @@index([projectId])
   @@index([userId])
@@ -557,7 +557,7 @@ model Discount {
   autoProvisionEnabledAt Timestamp3? // Auto create discount codes for partners when they join the group
   provider               DiscountProvider @default("stripe")
   createdAt              Timestamp3         @default(now())
-  updatedAt              Timestamp3         @updatedAt
+  updatedAt temporal.updatedAt()
 
   programEnrollments ProgramEnrollment[]
   program            Program             @relation("ProgramDiscounts", fields: [programId], references: [id])
@@ -576,7 +576,7 @@ model DiscountCode {
   partnerId  String
   linkId     String   @unique
   createdAt  Timestamp3 @default(now())
-  updatedAt  Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
   discount          Discount?          @relation(fields: [discountId], references: [id], onDelete: SetNull)
@@ -609,7 +609,7 @@ model Domain {
 
   linkRetentionDays Int? // default is null (links are retained forever)
   createdAt         Timestamp3 @default(now())
-  updatedAt         Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   projectId        String?
   project          Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -630,7 +630,7 @@ model RegisteredDomain {
   renewalFee            Int       @default(1200) // $12
   expiresAt             Timestamp3
   createdAt             Timestamp3  @default(now())
-  updatedAt             Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
 
   project Project @relation(fields: [projectId], references: [id])
   domain  Domain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
@@ -675,7 +675,7 @@ model EmailDomain {
   resendDomainId String?           @unique
   lastChecked    Timestamp3          @default(now())
   createdAt      Timestamp3          @default(now())
-  updatedAt      Timestamp3          @updatedAt
+  updatedAt temporal.updatedAt()
 
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
 
@@ -709,7 +709,7 @@ model Folder {
   type        FolderType         @default("default")
   accessLevel FolderAccessLevel? // Access level of the folder within the workspace
   createdAt   Timestamp3           @default(now())
-  updatedAt   Timestamp3           @updatedAt
+  updatedAt temporal.updatedAt()
 
   project        Project               @relation(fields: [projectId], references: [id])
   links          Link[]
@@ -728,7 +728,7 @@ model FolderUser {
   userId    String
   role      FolderUserRole?
   createdAt Timestamp3        @default(now())
-  updatedAt Timestamp3        @updatedAt
+  updatedAt temporal.updatedAt()
 
   folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -775,7 +775,7 @@ model FraudRule {
   config     JsonData?
   disabledAt Timestamp3?
   createdAt  Timestamp3      @default(now())
-  updatedAt  Timestamp3      @updatedAt
+  updatedAt temporal.updatedAt()
 
   program Program? @relation(fields: [programId], references: [id], onDelete: Cascade)
 
@@ -796,7 +796,7 @@ model FraudEventGroup {
   resolvedAt       Timestamp3?
   status           FraudEventStatus @default("pending")
   createdAt        Timestamp3         @default(now())
-  updatedAt        Timestamp3         @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
   partner           Partner           @relation(fields: [partnerId], references: [id], onDelete: Cascade)
@@ -823,7 +823,7 @@ model FraudEvent {
   hash              String
   metadata          JsonData?
   createdAt         Timestamp3 @default(now())
-  updatedAt         Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   fraudEventGroup FraudEventGroup @relation(fields: [fraudEventGroupId], references: [id], onDelete: Cascade)
   partner         Partner         @relation(fields: [partnerId], references: [id], onDelete: Cascade)
@@ -858,7 +858,7 @@ model FraudAlert {
   reviewedAt   Timestamp3?
   reviewNote   String?
   createdAt    Timestamp3         @default(now())
-  updatedAt    Timestamp3         @updatedAt
+  updatedAt temporal.updatedAt()
 
   partner           Partner           @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   program           Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -903,7 +903,7 @@ model PartnerGroup {
   workflowId                   String?              @unique
   utmTemplateId                String?              @unique
   createdAt                    Timestamp3             @default(now())
-  updatedAt                    Timestamp3             @updatedAt
+  updatedAt temporal.updatedAt()
 
   program                  Program                   @relation(fields: [programId], references: [id], onDelete: Cascade)
   clickReward              Reward?                   @relation("ClickReward", fields: [clickRewardId], references: [id])
@@ -930,7 +930,7 @@ model PartnerGroupDefaultLink {
   domain    String
   url       String
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
   partnerGroup PartnerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -960,7 +960,7 @@ model Integration {
   category    String?
   comingSoon  Boolean  @default(false)
   createdAt   Timestamp3 @default(now())
-  updatedAt   Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   user          User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
   project       Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -978,7 +978,7 @@ model InstalledIntegration {
   integrationId String // integration that was installed
   projectId     String // workspace where integration was installed
   createdAt     Timestamp3 @default(now())
-  updatedAt     Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
   credentials   Json?
   settings      Json?
 
@@ -1145,7 +1145,7 @@ model Link {
   lastLeadAt       Timestamp3? // when the link last brought in a new lead
   lastConversionAt Timestamp3? // when the link last brought in a new conversion
   createdAt        Timestamp3  @default(now())
-  updatedAt        Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
 
   // Link short domain
   shortDomain Domain @relation(fields: [domain], references: [slug])
@@ -1205,7 +1205,7 @@ model Message {
   readInApp   Timestamp3?
   readInEmail Timestamp3?
   createdAt   Timestamp3  @default(now())
-  updatedAt   Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
   partner           Partner             @relation("PartnerMessages", fields: [partnerId], references: [id], onDelete: Cascade)
@@ -1278,6 +1278,7 @@ enum Category {
 }
 
 model ProgramCategory {
+  id        String   @id @default(cuid(2))
   programId String
   category  Category
 
@@ -1318,7 +1319,7 @@ model DiscoveredPartner {
   messagedAt Timestamp3?
 
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
   partner           Partner            @relation(fields: [partnerId], references: [id], onDelete: Cascade)
@@ -1560,7 +1561,7 @@ model Partner {
 
   // timestamp fields
   createdAt      Timestamp3  @default(now())
-  updatedAt      Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
   discoverableAt Timestamp3?
   trustedAt      Timestamp3?
 
@@ -1607,6 +1608,7 @@ model Partner {
 }
 
 model PartnerInvite {
+  id        String      @id @default(cuid(2))
   email     String
   expires   Timestamp3
   partnerId String
@@ -1627,7 +1629,7 @@ model PartnerUser {
   userId    String
   partnerId String
   createdAt Timestamp3    @default(now())
-  updatedAt Timestamp3    @updatedAt
+  updatedAt temporal.updatedAt()
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
@@ -1639,6 +1641,7 @@ model PartnerUser {
 }
 
 model PartnerIndustryInterest {
+  id               String           @id @default(cuid(2))
   partnerId        String
   industryInterest IndustryInterest
 
@@ -1658,6 +1661,7 @@ enum PreferredEarningStructure {
 }
 
 model PartnerPreferredEarningStructure {
+  id                        String                    @id @default(cuid(2))
   partnerId                 String
   preferredEarningStructure PreferredEarningStructure
 
@@ -1679,6 +1683,7 @@ enum SalesChannel {
 }
 
 model PartnerSalesChannel {
+  id           String       @id @default(cuid(2))
   partnerId    String
   salesChannel SalesChannel
 
@@ -1724,7 +1729,7 @@ model Payout {
   failureReason       String?
   webhookEventId      String?              @unique // only for external payouts
   createdAt           Timestamp3             @default(now())
-  updatedAt           Timestamp3             @updatedAt
+  updatedAt temporal.updatedAt()
 
   userId      String? // user who made the payout
   initiatedAt Timestamp3?
@@ -1771,7 +1776,7 @@ model PartnerPlatform {
   views         BigInt       @default(0) // Video views for YouTube, impressions for social platforms, pageviews for websites
   metadata      Json?
   createdAt     Timestamp3     @default(now())
-  updatedAt     Timestamp3     @updatedAt
+  updatedAt temporal.updatedAt()
   verifiedAt    Timestamp3?
   lastCheckedAt Timestamp3?
 
@@ -1798,7 +1803,7 @@ model Postback {
   receiver   PostbackReceiver
   disabledAt Timestamp3?
   createdAt  Timestamp3         @default(now())
-  updatedAt  Timestamp3         @updatedAt
+  updatedAt temporal.updatedAt()
 
   partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
@@ -1860,7 +1865,7 @@ model Program {
   messagingEnabledAt      Timestamp3?
   partnerNetworkEnabledAt Timestamp3?
   createdAt               Timestamp3  @default(now())
-  updatedAt               Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
   startedAt               Timestamp3?
   deactivatedAt           Timestamp3?
 
@@ -1940,7 +1945,7 @@ model ProgramEnrollment {
   consistencyScore        Int? // based on daysSinceLastConversion
 
   createdAt                    Timestamp3             @default(now())
-  updatedAt                    Timestamp3             @updatedAt
+  updatedAt temporal.updatedAt()
   customerDataSharingEnabledAt Timestamp3?
   groupMoveDisabledAt          Timestamp3?
   bannedAt                     Timestamp3?
@@ -2012,7 +2017,7 @@ model PartnerReferral {
   formData   JsonData?
   status     ReferralStatus @default("pending")
   createdAt  Timestamp3       @default(now())
-  updatedAt  Timestamp3       @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program           @relation(fields: [programId], references: [id])
   partner           Partner           @relation(fields: [partnerId], references: [id])
@@ -2049,7 +2054,7 @@ model Reward {
   maxDuration        Int? // in months (0 -> not recurring, null -> infinite)
   modifiers          JsonData?
   createdAt          Timestamp3        @default(now())
-  updatedAt          Timestamp3        @updatedAt
+  updatedAt temporal.updatedAt()
 
   program           Program             @relation(fields: [programId], references: [id])
   clickEnrollments  ProgramEnrollment[] @relation("ClickRewardEnrollments")
@@ -2068,7 +2073,7 @@ model Tag {
   name      String
   color     String    @default("blue")
   createdAt Timestamp3  @default(now())
-  updatedAt Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
   project   Project   @relation(fields: [projectId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   projectId String
   links     LinkTag[]
@@ -2082,7 +2087,7 @@ model Tag {
 model LinkTag {
   id        String   @id @default(cuid(2))
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
   link      Link     @relation(fields: [linkId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   linkId    String
   tag       Tag      @relation(fields: [tagId], references: [id], onUpdate: Cascade, onDelete: Cascade)
@@ -2102,7 +2107,7 @@ model Token {
   expires    Timestamp3?
   lastUsed   Timestamp3?
   createdAt  Timestamp3  @default(now())
-  updatedAt  Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String
 
@@ -2120,7 +2125,7 @@ model RestrictedToken {
   expires        Timestamp3?
   lastUsed       Timestamp3?
   createdAt      Timestamp3  @default(now())
-  updatedAt      Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
   userId         String
   projectId      String
   installationId String? // if the token is generated by an OAuth client
@@ -2139,6 +2144,7 @@ model RestrictedToken {
 
 // Login tokens
 model VerificationToken {
+  id         String   @id @default(cuid(2))
   identifier String
   token      String   @unique
   expires    Timestamp3
@@ -2150,6 +2156,7 @@ model VerificationToken {
 
 // Email verification OTPs
 model EmailVerificationToken {
+  id         String   @id @default(cuid(2))
   identifier String
   token      String   @unique
   expires    Timestamp3
@@ -2161,6 +2168,7 @@ model EmailVerificationToken {
 
 // Password reset tokens
 model PasswordResetToken {
+  id         String   @id @default(cuid(2))
   identifier String
   token      String   @unique
   expires    Timestamp3
@@ -2191,7 +2199,7 @@ model UtmTemplate {
   projectId String?
 
   createdAt Timestamp3 @default(now())
-  updatedAt Timestamp3 @updatedAt
+  updatedAt temporal.updatedAt()
 
   @@unique([projectId, name])
   @@index([userId])
@@ -2220,7 +2228,7 @@ model Webhook {
   lastFailedAt        Timestamp3?
   disabledAt          Timestamp3?
   createdAt           Timestamp3        @default(now())
-  updatedAt           Timestamp3        @updatedAt
+  updatedAt temporal.updatedAt()
 
   project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   installedIntegration InstalledIntegration? @relation(fields: [installationId], references: [id], onDelete: Cascade)
@@ -2266,7 +2274,7 @@ model Workflow {
   actions           Json
   disabledAt        Timestamp3?
   createdAt         Timestamp3        @default(now())
-  updatedAt         Timestamp3        @updatedAt
+  updatedAt temporal.updatedAt()
 
   program      Program       @relation(fields: [programId], references: [id], onDelete: Cascade)
 
@@ -2345,7 +2353,7 @@ model Project {
   ssoEmailDomain   String?   @unique
   ssoEnforcedAt    Timestamp3?
   createdAt        Timestamp3  @default(now())
-  updatedAt        Timestamp3  @updatedAt
+  updatedAt temporal.updatedAt()
   usageLastChecked Timestamp3  @default(now())
 
   users                 ProjectUsers[]
@@ -2383,6 +2391,7 @@ enum WorkspaceRole {
 }
 
 model ProjectInvite {
+  id        String        @id @default(cuid(2))
   email     String
   expires   Timestamp3
   project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -2404,7 +2413,7 @@ model ProjectUsers {
   workspacePreferences   Json?
   defaultFolderId        String?
   createdAt              Timestamp3                @default(now())
-  updatedAt              Timestamp3                @updatedAt
+  updatedAt temporal.updatedAt()
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
