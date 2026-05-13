@@ -22,12 +22,13 @@ async function runSitemapQueueBatch(startingAfter?: string) {
   const rows = await prisma.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`
       SELECT p.id
-      FROM Project p
-      INNER JOIN Domain d ON d.projectId = p.id
-        AND d.slug = JSON_UNQUOTE(JSON_EXTRACT(p.siteVisitTrackingSettings, '$.siteDomainSlug'))
-      WHERE p.siteVisitTrackingSettings IS NOT NULL
-        AND JSON_LENGTH(JSON_EXTRACT(p.siteVisitTrackingSettings, '$.trackedSitemaps')) > 0
-        AND CHAR_LENGTH(TRIM(IFNULL(JSON_UNQUOTE(JSON_EXTRACT(p.siteVisitTrackingSettings, '$.siteDomainSlug')), ''))) > 0
+      FROM "Project" p
+      INNER JOIN "Domain" d ON d."projectId" = p.id
+        AND d.slug = p."siteVisitTrackingSettings"->>'siteDomainSlug'
+      WHERE p."siteVisitTrackingSettings" IS NOT NULL
+        AND jsonb_typeof(p."siteVisitTrackingSettings"->'trackedSitemaps') = 'array'
+        AND jsonb_array_length(p."siteVisitTrackingSettings"->'trackedSitemaps') > 0
+        AND char_length(trim(coalesce(p."siteVisitTrackingSettings"->>'siteDomainSlug', ''))) > 0
         ${cursorFragment}
       ORDER BY p.id ASC
       LIMIT ${SITEMAP_QUEUE_BATCH_SIZE}

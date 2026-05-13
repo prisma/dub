@@ -28,7 +28,7 @@ export const GET = withCron(async () => {
         },
       ],
       submissionRequirements: {
-        path: "$.socialMetrics",
+        path: ["socialMetrics"],
         not: Prisma.JsonNull,
       },
     },

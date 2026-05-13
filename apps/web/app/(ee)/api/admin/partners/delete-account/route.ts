@@ -1,5 +1,5 @@
 import { withAdmin } from "@/lib/auth";
-import { conn } from "@/lib/planetscale";
+import { conn } from "@/lib/postgres";
 import { stripe } from "@/lib/stripe";
 import { recordLink } from "@/lib/tinybird";
 import { prisma } from "@dub/prisma";
@@ -142,7 +142,7 @@ export const POST = withAdmin(
         );
       }
 
-      await conn.execute(`DELETE FROM Partner WHERE id = ?`, [partner.id]);
+      await conn.execute(`DELETE FROM "Partner" WHERE id = ?`, [partner.id]);
       console.log(`Deleted partner ${partner.email} (${partner.id})`);
     }
 

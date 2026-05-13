@@ -1,4 +1,4 @@
-import { getLinkViaEdge } from "@/lib/planetscale";
+import { getLinkViaEdge } from "@/lib/postgres";
 import { BlurImage } from "@dub/ui";
 import {
   GOOGLE_FAVICON_URL,

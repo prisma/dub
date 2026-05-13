@@ -4,7 +4,7 @@ SQL >
 %
 SELECT
     link_id,
-    -- here we don't wrap tag_ids and partner_tag_ids in array() 
+    -- here we don't wrap tag_ids and partner_tag_ids in array()
     -- because the parent arrayJoin explodes rows
     arrayJoin(
         multiIf(
@@ -587,5 +587,4 @@ SQL >
         {% elif eventType == 'composite' %}group_by_link_metadata_composite
         {% else %} group_by_link_metadata_clicks
         {% end %}
-
 

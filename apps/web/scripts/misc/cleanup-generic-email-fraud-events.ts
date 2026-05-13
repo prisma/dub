@@ -13,13 +13,13 @@ async function main() {
       OR: [
         {
           metadata: {
-            path: "$.matchType",
+            path: ["matchType"],
             equals: "domainMatch",
           },
         },
         {
           metadata: {
-            path: "$.matchType",
+            path: ["matchType"],
             equals: "historicalDomainMatch",
           },
         },

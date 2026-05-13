@@ -1,4 +1,4 @@
-import { processKey } from "@/lib/api/links/utils";
+import { processKey } from "@/lib/api/links/utils/process-key";
 import { MAX_PARTNERS_INVITES_PER_REQUEST } from "@/lib/constants/program";
 import {
   IdentityVerificationStatus,

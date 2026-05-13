@@ -37,24 +37,24 @@ export const getLinkWithPartner = async ({
   const { rows } =
     (await conn.execute(
       `SELECT 
-        Link.*,
-        Partner.id as partnerId,
-        Partner.name as partnerName,
-        Partner.image as partnerImage,
-        ProgramEnrollment.groupId as groupId,
-        ProgramEnrollment.tenantId as tenantId,
-        PartnerDiscount.id as discountId,
-        PartnerDiscount.amount as discountAmount,
-        PartnerDiscount.type as discountType,
-        PartnerDiscount.maxDuration as discountMaxDuration,
-        PartnerDiscount.couponId as discountCouponId,
-        PartnerDiscount.couponTestId as discountCouponTestId
-       FROM Link
-       LEFT JOIN ProgramEnrollment ON ProgramEnrollment.programId = Link.programId AND ProgramEnrollment.partnerId = Link.partnerId
-       LEFT JOIN Partner ON Partner.id = ProgramEnrollment.partnerId
-       LEFT JOIN Discount PartnerDiscount ON ProgramEnrollment.discountId = PartnerDiscount.id
-       LEFT JOIN Program ON Program.id = Link.programId
-       WHERE Link.domain = ? AND Link.key = ?`,
+        l.*,
+        p.id as "partnerId",
+        p.name as "partnerName",
+        p.image as "partnerImage",
+        pe."groupId" as "groupId",
+        pe."tenantId" as "tenantId",
+        d.id as "discountId",
+        d.amount as "discountAmount",
+        d.type as "discountType",
+        d."maxDuration" as "discountMaxDuration",
+        d."couponId" as "discountCouponId",
+        d."couponTestId" as "discountCouponTestId"
+       FROM "Link" l
+       LEFT JOIN "ProgramEnrollment" pe ON pe."programId" = l."programId" AND pe."partnerId" = l."partnerId"
+       LEFT JOIN "Partner" p ON p.id = pe."partnerId"
+       LEFT JOIN "Discount" d ON pe."discountId" = d.id
+       LEFT JOIN "Program" pg ON pg.id = l."programId"
+       WHERE l."domain" = ? AND l."key" = ?`,
       [domain, keyToQuery],
     )) || {};
 

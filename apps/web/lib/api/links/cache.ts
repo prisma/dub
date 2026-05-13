@@ -1,4 +1,4 @@
-import { getLinkViaEdge } from "@/lib/planetscale";
+import { getLinkViaEdge } from "@/lib/postgres";
 import { LinkProps, RedisLinkProps } from "@/lib/types";
 import {
   formatRedisLink,
@@ -90,7 +90,7 @@ class LinkCache {
         return cachedLink;
       } else {
         console.log(
-          `[Redis Cache MISS] ${cacheKey} - Not found in LRU or Redis, falling back to MySQL...`,
+          `[Redis Cache MISS] ${cacheKey} - Not found in LRU or Redis, falling back to Postgres...`,
         );
         return null;
       }
@@ -104,7 +104,9 @@ class LinkCache {
         return cachedLink;
       }
 
-      console.log(`[Vercel Cache MISS] ${cacheKey} - Falling back to MySQL...`);
+      console.log(
+        `[Vercel Cache MISS] ${cacheKey} - Falling back to Postgres...`,
+      );
 
       const linkData = await getLinkViaEdge({
         domain,

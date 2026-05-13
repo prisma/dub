@@ -1,12 +1,12 @@
 import { DubApiError, handleAndReturnErrorResponse } from "@/lib/api/errors";
 import { keyChecks, processKey } from "@/lib/api/links/utils";
-import { getWorkspaceViaEdge } from "@/lib/planetscale";
+import { getWorkspaceViaEdge } from "@/lib/postgres";
 import { domainKeySchema } from "@/lib/zod/schemas/links";
 import { workspaceIdSchema } from "@/lib/zod/schemas/workspaces";
 import { getSearchParams } from "@dub/utils";
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 // GET /api/links/exists – run keyChecks on the key
 export const GET = async (req: NextRequest) => {

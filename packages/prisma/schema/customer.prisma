@@ -45,5 +45,4 @@ model Customer {
   @@index(partnerId)
   @@index(linkId)
   @@index(country)
-  @@fulltext([email, name]) // For full-text search
 }

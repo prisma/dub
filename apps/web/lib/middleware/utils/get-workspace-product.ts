@@ -1,4 +1,4 @@
-import { conn } from "@/lib/planetscale/connection";
+import { conn } from "@/lib/postgres/connection";
 import { WorkspaceProps } from "@/lib/types";
 import { redis } from "@/lib/upstash";
 import { after } from "next/server";
@@ -13,7 +13,7 @@ export const getWorkspaceProduct = async (workspaceSlug: string) => {
     }
 
     const { rows } =
-      (await conn.execute(`SELECT * FROM Project WHERE slug = ?`, [
+      (await conn.execute(`SELECT * FROM "Project" WHERE "slug" = ?`, [
         workspaceSlug,
       ])) || {};
 

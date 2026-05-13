@@ -17,12 +17,12 @@ export const checkIfKeyExists = async ({
     ? // for case sensitive domains, we need to encode the key
       encodeKey(key)
     : // for non-case sensitive domains, we need to make sure that the key is always URI-decoded + punycode-encoded
-      // (cause that's how we store it in MySQL)
+      // (cause that's how we store it)
       punyEncode(decodeURIComponent(key));
 
   const { rows } =
     (await conn.execute(
-      "SELECT 1 FROM Link WHERE domain = ? AND `key` = ? LIMIT 1",
+      `SELECT 1 FROM "Link" WHERE "domain" = ? AND "key" = ? LIMIT 1`,
       [domain, keyToQuery],
     )) || {};
 

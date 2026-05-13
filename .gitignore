@@ -35,6 +35,7 @@ dist/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+packages/prisma/.tmp/
 
 # miscellaneous
 apps/web/scripts/fix.ts

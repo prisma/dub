@@ -7,7 +7,7 @@ model Postback {
   id         String           @id @default(cuid())
   partnerId  String
   name       String
-  url        String           @db.LongText
+  url        String           @db.Text
   secret     String
   triggers   Json
   receiver   PostbackReceiver

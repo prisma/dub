@@ -3,7 +3,7 @@ import { EdgeLinkProps } from "./types";
 
 export const getShortLinkViaEdge = async (shortLink: string) => {
   const { rows } =
-    (await conn.execute("SELECT * FROM Link WHERE shortLink = ?", [
+    (await conn.execute(`SELECT * FROM "Link" WHERE "shortLink" = ?`, [
       shortLink,
     ])) || {};
 

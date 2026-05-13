@@ -1,7 +1,7 @@
 import { COMMON_CORS_HEADERS } from "@/lib/api/cors";
 import { DubApiError, handleAndReturnErrorResponse } from "@/lib/api/errors";
 import { parseRequestBody } from "@/lib/api/utils";
-import { getClickEvent } from "@/lib/tinybird";
+import { getClickEvent } from "@/lib/tinybird/get-click-event";
 import { ratelimit, redis } from "@/lib/upstash";
 import { LOCALHOST_IP } from "@dub/utils";
 import { ipAddress, waitUntil } from "@vercel/functions";

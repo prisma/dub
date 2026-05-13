@@ -12,7 +12,7 @@ interface QueryResult {
   couponTestId: string | null;
   groupId: string | null;
   tenantId: string | null;
-  /** JSON array from JSON_ARRAYAGG; driver may return a string or parsed array */
+  /** JSON array from json_agg; driver may return a string or parsed array */
   partnerTagIds: string | string[] | null;
 }
 
@@ -55,42 +55,42 @@ export const getPartnerEnrollmentInfo = async ({
 
   const { rows } = await conn.execute<QueryResult>(
     `SELECT
-      Partner.id,
-      Partner.name,
-      Partner.image,
-      Discount.id AS discountId,
-      Discount.amount,
-      Discount.type,
-      Discount.maxDuration,
-      Discount.couponId,
-      Discount.couponTestId,
-      ProgramEnrollment.groupId,
-      ProgramEnrollment.tenantId,
-      tagAgg.partnerTagIds
-    FROM
-      ProgramEnrollment
-      LEFT JOIN Partner ON Partner.id = ProgramEnrollment.partnerId
-      LEFT JOIN Discount ON Discount.id = ProgramEnrollment.discountId
+      p.id,
+      p.name,
+      p.image,
+      d.id AS "discountId",
+      d.amount,
+      d.type,
+      d."maxDuration",
+      d."couponId",
+      d."couponTestId",
+      pe."groupId",
+      pe."tenantId",
+      tagAgg."partnerTagIds"
+    FROM "ProgramEnrollment" pe
+      LEFT JOIN "Partner" p ON p.id = pe."partnerId"
+      LEFT JOIN "Discount" d ON d.id = pe."discountId"
       LEFT JOIN (
         SELECT
-          programId,
-          partnerId,
-          JSON_ARRAYAGG(partnerTagId) AS partnerTagIds
+          "programId",
+          "partnerId",
+          json_agg("partnerTagId") AS "partnerTagIds"
         FROM (
           SELECT DISTINCT
-            programId,
-            partnerId,
-            partnerTagId
-          FROM ProgramPartnerTag
-          WHERE programId = ? AND partnerId = ?
-        ) AS distinct_program_partner_tags
-        GROUP BY programId, partnerId
+            "programId",
+            "partnerId",
+            "partnerTagId"
+          FROM "ProgramPartnerTag"
+          WHERE "programId" = ? AND "partnerId" = ?
+        ) distinct_program_partner_tags
+        GROUP BY "programId", "partnerId"
       ) AS tagAgg
-        ON tagAgg.programId = ProgramEnrollment.programId
-        AND tagAgg.partnerId = ProgramEnrollment.partnerId
+        ON tagAgg."programId" = pe."programId"
+        AND tagAgg."partnerId" = pe."partnerId"
     WHERE
-      ProgramEnrollment.partnerId = ?
-      AND ProgramEnrollment.programId = ?`,
+      pe."partnerId" = ?
+      AND pe."programId" = ?
+    LIMIT 1`,
     [programId, partnerId, partnerId, programId],
   );
 

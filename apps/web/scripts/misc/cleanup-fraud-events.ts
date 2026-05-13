@@ -10,7 +10,7 @@ async function main() {
         resolvedAt: null,
       },
       metadata: {
-        path: "$.matchType",
+        path: ["matchType"],
         equals: "historicalDomainMatch",
       },
       customer: {

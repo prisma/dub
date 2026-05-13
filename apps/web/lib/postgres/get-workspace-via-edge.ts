@@ -11,19 +11,19 @@ export const getWorkspaceViaEdge = async ({
 }) => {
   const query = includeDomains
     ? `
-      SELECT 
+      SELECT
         w.*,
-        d.slug
-      FROM Project w
-      LEFT JOIN Domain d ON w.id = d.projectId
+        d.slug as "domainSlug"
+      FROM "Project" w
+      LEFT JOIN "Domain" d ON w.id = d."projectId"
       WHERE w.id = ?
       LIMIT 100
     `
     : `
-      SELECT 
-        w.* 
-      FROM Project w 
-      WHERE w.id = ? 
+      SELECT
+        w.*
+      FROM "Project" w
+      WHERE w.id = ?
       LIMIT 1
     `;
 
@@ -44,15 +44,15 @@ export const getWorkspaceViaEdge = async ({
 
   // Process all rows to collect domains
   rows.forEach((row: any) => {
-    if (row.slug) {
+    if (row.domainSlug) {
       domains.push({
-        slug: row.slug,
+        slug: row.domainSlug,
       });
     }
   });
 
   // Remove domain fields from workspace object
-  const { slug, ...cleanWorkspaceData } = workspaceData;
+  const { domainSlug, ...cleanWorkspaceData } = workspaceData;
 
   return {
     ...cleanWorkspaceData,

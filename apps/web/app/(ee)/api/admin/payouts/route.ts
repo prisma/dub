@@ -1,6 +1,9 @@
 import { getStartEndDates } from "@/lib/analytics/utils/get-start-end-dates";
 import { withAdmin } from "@/lib/auth";
-import { sqlGranularityMap } from "@/lib/planetscale/granularity";
+import {
+  pgDateBucket,
+  sqlGranularityMap,
+} from "@/lib/postgres/granularity";
 import { analyticsQuerySchema } from "@/lib/zod/schemas/analytics";
 import { prisma } from "@dub/prisma";
 import { InvoiceStatus, Prisma } from "@dub/prisma/client";
@@ -93,17 +96,17 @@ export const GET = withAdmin(async ({ searchParams }) => {
     { date: Date; payouts: number; fees: number; total: number }[]
   >`
     SELECT 
-      DATE_FORMAT(CONVERT_TZ(createdAt, "UTC", ${timezone}), ${dateFormat}) as date,
+      ${pgDateBucket({ column: Prisma.sql`"createdAt"`, timezone, dateFormat })} as date,
       SUM(amount) as payouts,
       SUM(fee) as fees,
       SUM(total) as total
-    FROM Invoice
+    FROM "Invoice"
     WHERE 
-      ${programId ? Prisma.sql`programId = ${programId}` : Prisma.sql`programId != ${ACME_PROGRAM_ID}`}
+      ${programId ? Prisma.sql`"programId" = ${programId}` : Prisma.sql`"programId" != ${ACME_PROGRAM_ID}`}
       AND ${status ? Prisma.sql`status = ${status}` : Prisma.sql`status != 'failed'`}
-      AND createdAt >= ${startDate}
-      AND createdAt <= ${endDate}
-    GROUP BY DATE_FORMAT(CONVERT_TZ(createdAt, "UTC", ${timezone}), ${dateFormat})
+      AND "createdAt" >= ${startDate}
+      AND "createdAt" <= ${endDate}
+    GROUP BY date
     ORDER BY date ASC;
   `;
 

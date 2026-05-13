@@ -61,7 +61,7 @@ export const GET = withAxiom(async (req) => {
       where: {
         integrationId: APPSFLYER_INTEGRATION_ID,
         settings: {
-          path: "$.appIds",
+          path: ["appIds"],
           array_contains: appId,
         },
       },

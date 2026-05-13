@@ -2,38 +2,17 @@
 version: "3.8"
 
 services:
-  ps-mysql:
-    image: mysql:8.0
+  postgres:
+    image: postgres:16
     restart: always
     environment:
-      MYSQL_DATABASE: planetscale
-      MYSQL_ROOT_HOST: "%"
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-    command:
-      [
-        "--max_connections=1000",
-        "--default-authentication-plugin=mysql_native_password",
-      ]
+      POSTGRES_DB: dub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - 3306:3306
+      - 5432:5432
     volumes:
-      - ps-mysql:/var/lib/mysql
-
-  planetscale-proxy:
-    image: ghcr.io/mattrobenolt/ps-http-sim:latest
-    command:
-      [
-        "-mysql-no-pass",
-        "-listen-port=3900",
-        "-mysql-dbname=planetscale",
-        "-mysql-addr=ps-mysql",
-      ]
-    depends_on:
-      - ps-mysql
-    ports:
-      - 3900:3900
-    links:
-      - ps-mysql
+      - postgres:/var/lib/postgresql/data
 
   mailhog:
     image: "mailhog/mailhog:latest"
@@ -42,4 +21,4 @@ services:
       - "8025:8025"
 
 volumes:
-  ps-mysql:
+  postgres:

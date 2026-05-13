@@ -4,12 +4,16 @@ import { DubApiError } from "@/lib/api/errors";
 import { getDefaultProgramIdOrThrow } from "@/lib/api/programs/get-default-program-id-or-throw";
 import { withWorkspace } from "@/lib/auth";
 import { throwIfNoPartnerIdOrTenantId } from "@/lib/partners/throw-if-no-partnerid-tenantid";
-import { sqlGranularityMap } from "@/lib/planetscale/granularity";
+import {
+  pgDateBucket,
+  sqlGranularityMap,
+} from "@/lib/postgres/granularity";
 import {
   partnerAnalyticsQuerySchema,
   partnersTopLinksSchema,
 } from "@/lib/zod/schemas/partners";
 import { prisma } from "@dub/prisma";
+import { Prisma } from "@dub/prisma/client";
 import { parseFilterValue } from "@dub/utils";
 import { format } from "date-fns";
 import { NextResponse } from "next/server";
@@ -124,18 +128,18 @@ export const GET = withWorkspace(
       const earnings = await prisma.$queryRaw<
         { start: string; earnings: number }[]
       >`
-    SELECT 
-      DATE_FORMAT(CONVERT_TZ(createdAt, '+00:00', ${timezone || "+00:00"}),  ${dateFormat}) AS start, 
+    SELECT
+      ${pgDateBucket({ column: Prisma.sql`"createdAt"`, timezone: timezone || "UTC", dateFormat })} AS start,
       SUM(earnings) AS earnings
-    FROM Commission
-    WHERE 
+    FROM "Commission"
+    WHERE
       earnings > 0
-      AND programId = ${programEnrollment.programId}
-      AND partnerId = ${programEnrollment.partnerId}
+      AND "programId" = ${programEnrollment.programId}
+      AND "partnerId" = ${programEnrollment.partnerId}
       AND status in ('pending', 'processed', 'paid')
       AND type = 'sale'
-      AND createdAt >= ${startDate}
-      AND createdAt < ${endDate}
+      AND "createdAt" >= ${startDate}
+      AND "createdAt" < ${endDate}
     GROUP BY start
     ORDER BY start ASC;`;
 

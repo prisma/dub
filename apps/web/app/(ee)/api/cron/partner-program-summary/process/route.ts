@@ -241,7 +241,7 @@ export const POST = withCron(async ({ rawBody }) => {
     const _previousMonthAnalytics = previousAnalyticsMap.get(partner.id);
     const _currentMonthAnalytics = currentAnalyticsMap.get(partner.id);
 
-    // Get lifetime analytics from MySQL
+    // Get lifetime analytics from Postgres
     const _lifetimeAnalytics = programEnrollments
       .find((enrollment) => enrollment.partner.id === partner.id)
       ?.links.reduce(
@@ -253,7 +253,7 @@ export const POST = withCron(async ({ rawBody }) => {
         { clicks: 0, leads: 0, sales: 0 },
       );
 
-    // Get earnings data from MySQL
+    // Get earnings data from Postgres
     const _previousMonthEarnings = previousEarningsMap.get(partner.id);
     const _currentMonthEarnings = currentEarningsMap.get(partner.id);
     const _lifetimeEarnings = lifetimeEarningsMap.get(partner.id);

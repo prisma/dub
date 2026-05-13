@@ -32,5 +32,42 @@
   "resolutions": {
     "chrono-node": "2.7.5"
   },
-  "packageManager": "pnpm@9.15.9"
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=24"
+  },
+  "pnpm": {
+    "overrides": {
+      "@prisma-next/adapter-postgres": "file:packages/prisma/vendor/prisma-next/prisma-next-adapter-postgres-0.0.1.tgz",
+      "@prisma-next/cli": "file:packages/prisma/vendor/prisma-next/prisma-next-cli-0.0.1.tgz",
+      "@prisma-next/config": "file:packages/prisma/vendor/prisma-next/prisma-next-config-0.0.1.tgz",
+      "@prisma-next/contract": "file:packages/prisma/vendor/prisma-next/prisma-next-contract-0.0.1.tgz",
+      "@prisma-next/contract-authoring": "file:packages/prisma/vendor/prisma-next/prisma-next-contract-authoring-0.0.1.tgz",
+      "@prisma-next/driver-postgres": "file:packages/prisma/vendor/prisma-next/prisma-next-driver-postgres-0.0.1.tgz",
+      "@prisma-next/emitter": "file:packages/prisma/vendor/prisma-next/prisma-next-emitter-0.0.1.tgz",
+      "@prisma-next/errors": "file:packages/prisma/vendor/prisma-next/prisma-next-errors-0.0.1.tgz",
+      "@prisma-next/family-sql": "file:packages/prisma/vendor/prisma-next/prisma-next-family-sql-0.0.1.tgz",
+      "@prisma-next/framework-components": "file:packages/prisma/vendor/prisma-next/prisma-next-framework-components-0.0.1.tgz",
+      "@prisma-next/ids": "file:packages/prisma/vendor/prisma-next/prisma-next-ids-0.0.1.tgz",
+      "@prisma-next/migration-tools": "file:packages/prisma/vendor/prisma-next/prisma-next-migration-tools-0.0.1.tgz",
+      "@prisma-next/operations": "file:packages/prisma/vendor/prisma-next/prisma-next-operations-0.0.1.tgz",
+      "@prisma-next/postgres": "file:packages/prisma/vendor/prisma-next/prisma-next-postgres-0.0.1.tgz",
+      "@prisma-next/psl-parser": "file:packages/prisma/vendor/prisma-next/prisma-next-psl-parser-0.0.1.tgz",
+      "@prisma-next/psl-printer": "file:packages/prisma/vendor/prisma-next/prisma-next-psl-printer-0.0.1.tgz",
+      "@prisma-next/sql-builder": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-builder-0.0.1.tgz",
+      "@prisma-next/sql-contract": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-0.0.1.tgz",
+      "@prisma-next/sql-contract-emitter": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-emitter-0.0.1.tgz",
+      "@prisma-next/sql-contract-psl": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-psl-0.0.1.tgz",
+      "@prisma-next/sql-contract-ts": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-contract-ts-0.0.1.tgz",
+      "@prisma-next/sql-errors": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-errors-0.0.1.tgz",
+      "@prisma-next/sql-operations": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-operations-0.0.1.tgz",
+      "@prisma-next/sql-orm-client": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-orm-client-0.0.1.tgz",
+      "@prisma-next/sql-relational-core": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-relational-core-0.0.1.tgz",
+      "@prisma-next/sql-runtime": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-runtime-0.0.1.tgz",
+      "@prisma-next/sql-schema-ir": "file:packages/prisma/vendor/prisma-next/prisma-next-sql-schema-ir-0.0.1.tgz",
+      "@prisma-next/target-postgres": "file:packages/prisma/vendor/prisma-next/prisma-next-target-postgres-0.0.1.tgz",
+      "@prisma-next/ts-render": "file:packages/prisma/vendor/prisma-next/prisma-next-ts-render-0.0.1.tgz",
+      "@prisma-next/utils": "file:packages/prisma/vendor/prisma-next/prisma-next-utils-0.0.1.tgz"
+    }
+  }
 }

@@ -22,8 +22,7 @@ jobs:
     env:
       CI: "true"
       NODE_OPTIONS: "--max-old-space-size=8192"
-      DATABASE_URL: "mysql://root:@localhost:3306/planetscale"
-      PLANETSCALE_DATABASE_URL: "http://root:unused@localhost:3900/planetscale"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/dub?schema=public"
 
       NEXTAUTH_SECRET: "e2e-test-secret-at-least-32-chars-long"
       NEXTAUTH_URL: "http://partners.localhost:8888"
@@ -70,19 +69,19 @@ jobs:
       STRIPE_APP_SECRET_KEY: "xx"
 
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:16
         env:
-          MYSQL_DATABASE: planetscale
-          MYSQL_ROOT_HOST: "%"
-          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          POSTGRES_DB: dub
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-cmd="pg_isready -U postgres -d dub"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
         ports:
-          - 3306:3306
+          - 5432:5432
 
       mailhog:
         image: mailhog/mailhog:latest
@@ -113,24 +112,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Start PlanetScale simulator
-        run: |
-          docker run -d --name ps-http-sim \
-            --network host \
-            ghcr.io/mattrobenolt/ps-http-sim:latest \
-            -listen-addr=0.0.0.0 \
-            -listen-port=3900 \
-            -mysql-dbname=planetscale \
-            -mysql-no-pass \
-            -mysql-addr=127.0.0.1
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install dependencies
@@ -154,6 +142,10 @@ jobs:
       - name: Push database schema
         working-directory: apps/web
         run: pnpm prisma:push
+
+      - name: Apply PostgreSQL postdeploy SQL
+        working-directory: packages/prisma
+        run: pnpm postdeploy:postgres
 
       - name: Seed test data
         working-directory: apps/web

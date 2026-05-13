@@ -42,7 +42,7 @@ export const POST = withAxiom(async (req) => {
           slug: "hubspot",
         },
         credentials: {
-          path: "$.hub_id",
+          path: ["hub_id"],
           equals: portalId,
         },
       },

@@ -7,7 +7,7 @@ import { parseRequestBody } from "@/lib/api/utils";
 import { withAxiom } from "@/lib/axiom/server";
 import { DeepLinkClickData } from "@/lib/middleware/utils/cache-deeplink-click-data";
 import { getIdentityHash } from "@/lib/middleware/utils/get-identity-hash";
-import { getLinkViaEdge } from "@/lib/planetscale";
+import { getLinkViaEdge } from "@/lib/postgres";
 import { recordClick } from "@/lib/tinybird";
 import { RedisLinkProps } from "@/lib/types";
 import { formatRedisLink, redis, redisGlobalWithTimeout } from "@/lib/upstash";
