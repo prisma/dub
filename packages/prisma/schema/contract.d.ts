@@ -27,14 +27,13 @@ import type {
 } from '@prisma-next/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'sha256:371c0349b82ec3fd80104ae0a15c1ab79690010867fc6f23df4671099f3a2df7'>;
+  StorageHashBase<'sha256:d5955b49f64edc75fda048b1ea4739cd32c093276785e3dec5ceefdc0dff3ba8'>;
 export type ExecutionHash =
   ExecutionHashBase<'sha256:01c316b3ac6cf360e880db365d1c2c4b0c432d821b9611bac3314dc36a53b240'>;
 export type ProfileHash =
   ProfileHashBase<'sha256:1a8dbe044289f30a1de958fe800cc5a8378b285d2e126a8c44b58864bac2c18e'>;
 
 export type CodecTypes = PgTypes;
-export type OperationTypes = Record<string, never>;
 export type LaneCodecTypes = CodecTypes;
 export type QueryOperationTypes = PgAdapterQueryOps<CodecTypes>;
 type DefaultLiteralValue<CodecId extends string, _Encoded> = CodecId extends keyof CodecTypes
@@ -2292,7 +2291,6 @@ export type FieldInputTypes = {
 };
 export type TypeMaps = TypeMapsType<
   CodecTypes,
-  OperationTypes,
   QueryOperationTypes,
   FieldOutputTypes,
   FieldInputTypes
@@ -2882,7 +2880,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: false;
-            readonly typeRef: 'JsonData';
           };
           readonly scheduledAt: {
             readonly nativeType: 'timestamp';
@@ -4342,7 +4339,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly createdAt: {
             readonly nativeType: 'timestamp';
@@ -4542,7 +4538,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly disabledAt: {
             readonly nativeType: 'timestamp';
@@ -4885,13 +4880,11 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly stripeChargeMetadata: {
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly failedAttempts: {
             readonly nativeType: 'int4';
@@ -5203,13 +5196,11 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly testVariants: {
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly testStartedAt: {
             readonly nativeType: 'timestamp';
@@ -6375,7 +6366,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly maxPartnerLinks: {
             readonly nativeType: 'int4';
@@ -6390,7 +6380,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly applicationFormPublishedAt: {
             readonly nativeType: 'timestamp';
@@ -6402,7 +6391,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly landerPublishedAt: {
             readonly nativeType: 'timestamp';
@@ -6932,7 +6920,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly status: {
             readonly nativeType: 'ReferralStatus';
@@ -7530,31 +7517,26 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly embedData: {
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly resources: {
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly referralFormData: {
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly applicationRequirements: {
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly termsUrl: {
             readonly nativeType: 'text';
@@ -7725,7 +7707,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly userId: {
             readonly nativeType: 'text';
@@ -7857,7 +7838,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly programApplicationId: {
             readonly nativeType: 'text';
@@ -9072,7 +9052,6 @@ type ContractBase = ContractType<
             readonly nativeType: 'json';
             readonly codecId: 'pg/json@1';
             readonly nullable: true;
-            readonly typeRef: 'JsonData';
           };
           readonly createdAt: {
             readonly nativeType: 'timestamp';

@@ -14027,7 +14027,7 @@
     }
   },
   "storage": {
-    "storageHash": "sha256:371c0349b82ec3fd80104ae0a15c1ab79690010867fc6f23df4671099f3a2df7",
+    "storageHash": "sha256:d5955b49f64edc75fda048b1ea4739cd32c093276785e3dec5ceefdc0dff3ba8",
     "tables": {
       "Account": {
         "columns": {
@@ -14152,10 +14152,7 @@
           "changeSet": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "createdAt": {
             "codecId": "pg/timestamp@1",
@@ -14344,10 +14341,7 @@
           "submissionRequirements": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "submissionsOpenAt": {
             "codecId": "pg/timestamp@1",
@@ -14530,10 +14524,7 @@
           "files": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "id": {
             "codecId": "sql/char@1",
@@ -14613,10 +14604,7 @@
           "urls": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "userId": {
             "codecId": "pg/text@1",
@@ -14759,8 +14747,7 @@
           "bodyJson": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": false,
-            "typeRef": "JsonData"
+            "nullable": false
           },
           "createdAt": {
             "codecId": "pg/timestamp@1",
@@ -16254,10 +16241,7 @@
           "appleAppSiteAssociation": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "archived": {
             "codecId": "pg/bool@1",
@@ -16271,10 +16255,7 @@
           "assetLinks": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "createdAt": {
             "codecId": "pg/timestamp@1",
@@ -16293,10 +16274,7 @@
               "value": "{}"
             },
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "expiredUrl": {
             "codecId": "pg/text@1",
@@ -17042,8 +17020,7 @@
           "metadata": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "partnerId": {
             "codecId": "pg/text@1",
@@ -17355,8 +17332,7 @@
           "config": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "createdAt": {
             "codecId": "pg/timestamp@1",
@@ -17445,10 +17421,7 @@
           "credentials": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "id": {
             "codecId": "sql/char@1",
@@ -17471,10 +17444,7 @@
           "settings": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "updatedAt": {
             "codecId": "pg/timestamptz@1",
@@ -17635,10 +17605,7 @@
           "screenshots": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "slug": {
             "codecId": "pg/text@1",
@@ -17826,8 +17793,7 @@
           "registeredDomains": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "status": {
             "codecId": "pg/enum@1",
@@ -17842,8 +17808,7 @@
           "stripeChargeMetadata": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "total": {
             "codecId": "pg/int4@1",
@@ -18022,8 +17987,7 @@
           "geo": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "id": {
             "codecId": "sql/char@1",
@@ -18177,8 +18141,7 @@
           "testVariants": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "title": {
             "codecId": "pg/text@1",
@@ -19108,10 +19071,7 @@
           "redirectUris": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           }
         },
         "foreignKeys": [
@@ -19392,10 +19352,7 @@
           "changeHistoryLog": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "companyName": {
             "codecId": "pg/text@1",
@@ -19478,10 +19435,7 @@
           "invoiceSettings": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "monthlyTraffic": {
             "codecId": "pg/enum@1",
@@ -19554,10 +19508,7 @@
           "veriffMetadata": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "veriffSessionId": {
             "codecId": "pg/text@1",
@@ -19761,14 +19712,12 @@
           "additionalLinks": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "applicationFormData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "applicationFormPublishedAt": {
             "codecId": "pg/timestamp@1",
@@ -19832,8 +19781,7 @@
           "landerData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "landerPublishedAt": {
             "codecId": "pg/timestamp@1",
@@ -20423,10 +20371,7 @@
           "metadata": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "partnerId": {
             "codecId": "pg/text@1",
@@ -20603,8 +20548,7 @@
           "formData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "id": {
             "codecId": "sql/char@1",
@@ -21342,10 +21286,7 @@
           "triggers": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           },
           "updatedAt": {
             "codecId": "pg/timestamptz@1",
@@ -21399,8 +21340,7 @@
           "applicationRequirements": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "createdAt": {
             "codecId": "pg/timestamp@1",
@@ -21441,8 +21381,7 @@
           "embedData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "featuredOnMarketplaceAt": {
             "codecId": "pg/timestamp@1",
@@ -21466,8 +21405,7 @@
           "inviteEmailData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "logo": {
             "codecId": "pg/text@1",
@@ -21537,14 +21475,12 @@
           "referralFormData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "resources": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "slug": {
             "codecId": "pg/text@1",
@@ -21666,8 +21602,7 @@
           "formData": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "groupId": {
             "codecId": "pg/text@1",
@@ -21844,8 +21779,7 @@
           "metadata": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "partnerId": {
             "codecId": "pg/text@1",
@@ -22642,10 +22576,7 @@
           "allowedHostnames": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "billingCycleEndsAt": {
             "codecId": "pg/timestamp@1",
@@ -22911,10 +22842,7 @@
           "siteVisitTrackingSettings": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "slug": {
             "codecId": "pg/text@1",
@@ -22935,10 +22863,7 @@
           "store": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           },
           "stripeConnectId": {
             "codecId": "pg/text@1",
@@ -23249,10 +23174,7 @@
           "workspacePreferences": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": true,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": true
           }
         },
         "foreignKeys": [
@@ -23619,8 +23541,7 @@
           "modifiers": {
             "codecId": "pg/json@1",
             "nativeType": "json",
-            "nullable": true,
-            "typeRef": "JsonData"
+            "nullable": true
           },
           "programId": {
             "codecId": "pg/text@1",
@@ -24427,10 +24348,7 @@
           "triggers": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           },
           "updatedAt": {
             "codecId": "pg/timestamptz@1",
@@ -24497,10 +24415,7 @@
           "actions": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           },
           "createdAt": {
             "codecId": "pg/timestamp@1",
@@ -24545,10 +24460,7 @@
           "triggerConditions": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           },
           "updatedAt": {
             "codecId": "pg/timestamptz@1",
@@ -24616,18 +24528,12 @@
           "topCountries": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           },
           "topLinks": {
             "codecId": "pg/jsonb@1",
             "nativeType": "jsonb",
-            "nullable": false,
-            "typeParams": {
-              "schemaJson": {}
-            }
+            "nullable": false
           },
           "totalClicks": {
             "codecId": "pg/int4@1",
@@ -25116,9 +25022,7 @@
       "JsonData": {
         "codecId": "pg/json@1",
         "nativeType": "json",
-        "typeParams": {
-          "schemaJson": {}
-        }
+        "typeParams": {}
       },
       "MessageType": {
         "codecId": "pg/enum@1",

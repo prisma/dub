@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { Pool } from "pg";
 
 const baseDatabaseUrl =
@@ -118,6 +119,7 @@ async function applyPrismaNextPlannedSql(databaseUrl: string) {
   const { loadConfig } = await import("@prisma-next/cli/config-loader");
   const { createControlClient, enrichContract } = await import("@prisma-next/cli/control-api");
   const config = await loadConfig("./prisma-next.config.ts");
+  const migrationsDir = resolve(process.cwd(), config.migrations?.dir ?? "migrations");
   const contractJson = JSON.parse(await readFile("./schema/contract.json", "utf8"));
   const frameworkComponents = [
     config.family,
@@ -140,6 +142,7 @@ async function applyPrismaNextPlannedSql(databaseUrl: string) {
       mode: "plan",
       contract,
       connection: databaseUrl,
+      migrationsDir,
     })
     .finally(() => client.close());
 

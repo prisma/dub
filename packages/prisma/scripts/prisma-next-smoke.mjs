@@ -35,7 +35,7 @@ async function prepareSmokeSchema(databaseUrl) {
     await pool.query("create schema if not exists prisma_contract");
     await pool.query(`
       create table if not exists prisma_contract.marker (
-        id smallint primary key default 1,
+        space text not null primary key default 'app',
         core_hash text not null,
         profile_hash text not null,
         contract_json jsonb,
