@@ -141,6 +141,7 @@ export const GET = withWorkspace(async ({ workspace, searchParams }) => {
   if (groupBy === "partnerId") {
     return byPartnerId({
       where,
+      programId,
     });
   }
 
@@ -158,8 +159,10 @@ export const GET = withWorkspace(async ({ workspace, searchParams }) => {
 
 async function byPartnerId({
   where,
+  programId,
 }: {
   where: Prisma.ProgramApplicationEventWhereInput;
+  programId: string;
 }) {
   const events = await prisma.programApplicationEvent.groupBy({
     by: ["referredByPartnerId"],
@@ -177,6 +180,12 @@ async function byPartnerId({
           where: {
             id: {
               in: partnerIds,
+            },
+            // TODO: remove this once we have a way to show the partners + CTA to invite them
+            programs: {
+              some: {
+                programId,
+              },
             },
           },
           select: {

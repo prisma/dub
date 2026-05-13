@@ -12,6 +12,30 @@ interface QueryResult {
   couponTestId: string | null;
   groupId: string | null;
   tenantId: string | null;
+  /** JSON array from json_agg; driver may return a string or parsed array */
+  partnerTagIds: string | string[] | null;
+}
+
+function parsePartnerTagIds(value: QueryResult["partnerTagIds"]): string[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    return value.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed)
+        ? parsed.filter(
+            (id): id is string => typeof id === "string" && id.length > 0,
+          )
+        : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 // Get enrollment info for a partner in a program
@@ -30,23 +54,44 @@ export const getPartnerEnrollmentInfo = async ({
   }
 
   const { rows } = await conn.execute<QueryResult>(
-    `SELECT 
+    `SELECT
       p.id,
       p.name,
       p.image,
-      d.id as "discountId",
+      d.id AS "discountId",
       d.amount,
       d.type,
       d."maxDuration",
       d."couponId",
       d."couponTestId",
       pe."groupId",
-      pe."tenantId"
+      pe."tenantId",
+      tagAgg."partnerTagIds"
     FROM "ProgramEnrollment" pe
-    LEFT JOIN "Partner" p ON p.id = pe."partnerId"
-    LEFT JOIN "Discount" d ON d.id = pe."discountId"
-    WHERE pe."partnerId" = ? AND pe."programId" = ? LIMIT 1`,
-    [partnerId, programId],
+      LEFT JOIN "Partner" p ON p.id = pe."partnerId"
+      LEFT JOIN "Discount" d ON d.id = pe."discountId"
+      LEFT JOIN (
+        SELECT
+          "programId",
+          "partnerId",
+          json_agg("partnerTagId") AS "partnerTagIds"
+        FROM (
+          SELECT DISTINCT
+            "programId",
+            "partnerId",
+            "partnerTagId"
+          FROM "ProgramPartnerTag"
+          WHERE "programId" = ? AND "partnerId" = ?
+        ) distinct_program_partner_tags
+        GROUP BY "programId", "partnerId"
+      ) AS tagAgg
+        ON tagAgg."programId" = pe."programId"
+        AND tagAgg."partnerId" = pe."partnerId"
+    WHERE
+      pe."partnerId" = ?
+      AND pe."programId" = ?
+    LIMIT 1`,
+    [programId, partnerId, partnerId, programId],
   );
 
   const result =
@@ -66,6 +111,7 @@ export const getPartnerEnrollmentInfo = async ({
       image: result.image,
       groupId: result.groupId,
       tenantId: result.tenantId,
+      partnerTagIds: parsePartnerTagIds(result.partnerTagIds),
     },
     discount: result.discountId
       ? {
