@@ -55,14 +55,16 @@ Current modules:
   and partner includes.
 - `customer-runtime-module`: customer cursor and list reads.
 
-Latest run, using Prisma Next tarballs packed from
-`feat/created-updated-at-authoring` at
-`93be243beea17c8f2a846445b6dd42ba35b7a30b` on 2026-05-07:
+Latest run, using Prisma Next tarballs packed from `origin/main` at
+`7044a2295bc398cec86e5c9cada3e932fcac486d` on 2026-05-13:
 
 - 27 modules, 72 operations: 49 reads and 23 writes.
-- Prisma 6 emitted 117 captured queries; Prisma Next emitted 103.
-- Same query count: 50/72 operations.
-- Result type shape equal: 70/72 operations.
+- Operation failures: 0.
+- Prisma 6 emitted 117 captured queries; Prisma Next emitted 107.
+- Same query count: 48/72 operations.
+- Prisma Next emitted fewer queries for 16 operations and more queries for 8
+  operations.
+- Result type shape equal: 69/72 operations.
 - Result value summary equal: 35/72 operations.
 - Before fixture equal: 72/72 operations.
 - After fixture equal: 53/72 operations overall, and 4/23 write operations.
@@ -79,6 +81,10 @@ Known visible result-type differences:
 - `analytics.read.all-time-composite-for-link`: Prisma 6 returns
   `Link.saleAmount` aggregate sums as `bigint`; Prisma Next currently returns
   the same safe value as `number`.
+- `folder.read.by-id-with-user`: the top-level `Folder` timestamp fields still
+  come back as `Date`, but the included `FolderUser.createdAt` and
+  `FolderUser.updatedAt` values currently come back from Prisma Next as
+  strings.
 - `program-enrollment.read.by-partner-program`: Prisma 6 returns
   `ProgramEnrollment.totalCommissions` as `bigint`; Prisma Next currently
   returns the selected `bigint` column as `string`.
@@ -91,8 +97,9 @@ Tracked write-query differences:
   JavaScript `Date` parameters to the driver.
 - Counter increments are not equivalent through the current Prisma Next
   high-level ORM. Prisma 6 emits atomic `SET field = field + $n` updates. The
-  Prisma Next high-level fallback currently reads the current value first, then
-  writes the computed scalar value plus `updatedAt`.
+  Prisma Next high-level fallback currently reads the current value first,
+  checks the target row, then writes the computed scalar value plus
+  `updatedAt`.
 - Multi-row count writes have different orchestration. For example,
   `commissions.update.mark-paid-count` captures Prisma 6 as
   `BEGIN` + matching-row `SELECT` + `UPDATE ... updatedAt = $n` + `COMMIT`,
@@ -115,7 +122,7 @@ Tracked write-query differences:
   usually matches, but raw fixture snapshots capture the resulting
   `timestamp(3)` state difference.
 - Date values still need follow-up. In the Europe/Rome run from
-  2026-05-07, many existing `timestamp(3)` reads differed by one hour in ORM
+  2026-05-13, many existing `timestamp(3)` reads differed by one hour in ORM
   results, and raw fixture snapshots for generated May 2026 timestamps differed
   by two hours because the process was in CEST. See
   `docs/prisma-next-date-value-expectations.md` for the expected Prisma 6
@@ -136,6 +143,17 @@ Tracked write-query differences:
 - `partner-group.read.expanded-list` maps a Prisma 6 raw SQL aggregate join
   into a Prisma Next high-level `PartnerGroup` read with included
   `ProgramEnrollment` rows and JavaScript-side counter folding.
+
+Harness compatibility notes for the 2026-05-13 run:
+
+- Prisma Next now treats the built-in `pg/json@1` and `pg/jsonb@1` codecs as
+  non-parameterized. The generated Dub contract normalization removes
+  `typeParams` and JSON `typeRef` usage from JSON columns so runtime codec
+  integrity validation can pass.
+- The runtime marker table now uses `space text` as its primary key. The
+  comparison and smoke harnesses create `prisma_contract.marker` with the
+  current shape so marker verification reaches the runtime operation under
+  test.
 
 ## Runtime Capture
 
